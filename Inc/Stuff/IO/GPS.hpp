@@ -45,9 +45,9 @@ struct Angle {
 
     constexpr float as_degrees() const {
         float decimal_mult;
-        if (constexpr auto pow_4 = Stf::pow(-10.f, -4); minutes_decimal_digits == 4) [[likely]]
+        if (constexpr auto pow_4 = Stf::pow(10.f, -4); minutes_decimal_digits == 4) [[likely]]
             decimal_mult = pow_4;
-        else if (constexpr auto pow_5 = Stf::pow(-10.f, -5); minutes_decimal_digits == 5) [[likely]]
+        else if (constexpr auto pow_5 = Stf::pow(10.f, -5); minutes_decimal_digits == 5) [[likely]]
             decimal_mult = pow_5;
         else [[unlikely]]
             decimal_mult = std::pow(10.f, -minutes_decimal_digits);

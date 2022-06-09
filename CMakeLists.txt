@@ -20,11 +20,11 @@ add_library(${PROJECT_NAME}
         Inc/Stuff/Maths/BLAS/Quat.hpp
         Inc/Stuff/Maths/BLAS/Util.hpp
         Inc/Stuff/Maths/BLAS/Vector.hpp
-        Inc/Stuff/Maths/CRC/CRC32.hpp
         Inc/Stuff/Maths/Scalar/Other.hpp
         Inc/Stuff/Maths/Scalar/Scalar.hpp
         Inc/Stuff/Maths/Scalar/Trig.hpp
         Inc/Stuff/Maths/Bit.hpp
+        Inc/Stuff/Maths/CRC.hpp
         Inc/Stuff/Maths/Fmt.hpp
         Inc/Stuff/Maths/Maths.hpp
         Inc/Stuff/Maths/Scalar.hpp

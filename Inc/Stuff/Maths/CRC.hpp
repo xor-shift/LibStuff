@@ -215,4 +215,6 @@ using namespace Detail::CRC::Concepts;
 namespace Descriptions = Detail::CRC::Descriptions;
 using Detail::CRC::CRCState;
 
+using CRC32State = CRCState<Descriptions::CRC32ISOHDLC, false>;
+
 }

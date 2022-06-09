@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <Stuff/Maths/CRC/CRC32.hpp>
+#include <Stuff/Maths/CRC.hpp>
 
 #include <fmt/format.h>
 

@@ -4,7 +4,7 @@
 
 #include <Stuff/Refl/Refl.hpp>
 #include <Stuff/Refl/Serde.hpp>
-#include <Stuff/Maths/CRC/CRC32.hpp>
+#include <Stuff/Maths/CRC.hpp>
 
 #include "./Delim.hpp"
 
@@ -124,11 +124,11 @@ private:
         serialize(tx_buf.end() - serialized_size_v<T>, v);
         serialize(tx_buf.end() - total_needed_size, header);
 
-        CRCContext<> context {};
+        CRC::CRC32State context {};
         for (size_t i = 0; i < total_needed_size; i++)
             context.update(tx_buf[i + leading_free_space]);
 
-        header.crc = context.finish();
+        header.crc = context.finished_value();
         serialize(tx_buf.end() - total_needed_size, header);
 
         return true;
@@ -205,11 +205,11 @@ private:
 
         std::fill(decoded_span.begin(), decoded_span.begin() + 4, 0);
 
-        CRCContext<> context {};
+        CRC::CRC32State context {};
         for (auto b : decoded_span)
             context.update(b);
 
-        PacketHeader calculated_header { .crc = context.finish(),
+        PacketHeader calculated_header { .crc = context.finished_value(),
             .len = static_cast<uint16_t>(payload_span.size()),
             .id = given_header.id,
             .order = given_header.order };

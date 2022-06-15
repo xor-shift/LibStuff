@@ -3,6 +3,7 @@
 #include <iterator>
 #include <span>
 
+// types etc.
 namespace Stf::Gfx::Detail::Image::QoI {
 
 template<size_t N, std::input_iterator IIter> constexpr std::optional<std::array<uint8_t, N>> get_bytes(IIter&& it, IIter end) {
@@ -227,6 +228,10 @@ private:
 
 using QoIColorMap = ColorMap<uint8_t, 3, 5, 7, 11, 64>;
 
+}
+
+namespace Stf::Gfx::Detail::Image::QoI {
+
 struct QoIDecoder {
     using color_type = QoIColorMap::color_type;
 
@@ -305,7 +310,7 @@ struct QoIDecoder {
 };
 
 template<typename Allocator = std::allocator<uint8_t>>
-constexpr Error<Gfx::Image<Allocator>, std::string_view> decode_qoi_image(std::span<const uint8_t> encoded, Allocator const& allocator = Allocator()) {
+constexpr Error<Gfx::Image<Allocator>, std::string_view> decode(std::span<const uint8_t> encoded, Allocator const& allocator = Allocator()) {
     if (encoded.size() < 14 + 8)
         return "Insufficient data";
 
@@ -325,9 +330,6 @@ constexpr Error<Gfx::Image<Allocator>, std::string_view> decode_qoi_image(std::s
 
     for (auto in_p = payload_span.begin(); in_p != payload_span.end();) {
         std::array<uint8_t, 4> extra_data = state.last_seen;
-
-        if (in_p >= payload_span.end())
-            std::ignore = std::ignore;
 
         uint8_t leading = *in_p++;
         const auto type = block_type(leading);
@@ -349,7 +351,7 @@ constexpr Error<Gfx::Image<Allocator>, std::string_view> decode_qoi_image(std::s
 }
 
 template<typename Allocator = std::allocator<uint8_t>, std::input_iterator IIter>
-constexpr Error<Gfx::Image<Allocator>, std::string_view> decode_qoi_image(IIter begin, IIter end, Allocator const& allocator = Allocator()) {
+constexpr Error<Gfx::Image<Allocator>, std::string_view> decode(IIter begin, IIter end, Allocator const& allocator = Allocator()) {
     IIter it = begin;
 
     Header header;
@@ -393,14 +395,8 @@ constexpr Error<Gfx::Image<Allocator>, std::string_view> decode_qoi_image(IIter 
     return image;
 }
 
-struct QoIEncoder {
-    using color_type = QoIColorMap::color_type;
-
-    QoIColorMap map {};
-};
-
 template<typename Allocator = std::allocator<uint8_t>, std::output_iterator<uint8_t> OIter>
-constexpr void encode_qoi_image(OIter out_beg, Gfx::Image<Allocator> const& image) {
+constexpr void encode(OIter out_beg, Gfx::Image<Allocator> const& image) {
     Header header;
     unwrap_or_return(header, Header::from_image(image), );
     const auto header_bytes = header.to_bytes();
@@ -527,5 +523,12 @@ constexpr void encode_qoi_image(OIter out_beg, Gfx::Image<Allocator> const& imag
     out_it = std::fill_n(out_it, 7, 0);
     *out_it++ = 1;
 }
+
+}
+
+namespace Stf::Gfx::Formats::QoI {
+
+using Gfx::Detail::Image::QoI::decode;
+using Gfx::Detail::Image::QoI::encode;
 
 }

@@ -5,7 +5,12 @@ set(CMAKE_CXX_STANDARD 23)
 
 option(LibStuffUseFMT "" ON)
 
+set(${CMAKE_CXX_FLAGS} "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined")
+set(${CMAKE_EXE_LINKER_FLAGS} "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address -fsanitize=undefined")
+
 add_library(${PROJECT_NAME}
+        Inc/Stuff/Graphics/Image.hpp
+
         Inc/Stuff/IO/ACS.hpp
         Inc/Stuff/IO/Delim.hpp
         Inc/Stuff/IO/GPS.hpp
@@ -56,6 +61,8 @@ endif ()
 add_subdirectory(Thirdparty/googletest)
 
 add_executable(${PROJECT_NAME}_tests
+        Tests/Graphics/Image.cpp
+
         Tests/IO/Delim.cpp
         Tests/IO/GPS.cpp
         Tests/IO/Packetman.cpp
@@ -74,6 +81,9 @@ target_link_libraries(${PROJECT_NAME}_tests
         gtest gtest_main
         ${PROJECT_NAME}
         )
+
+target_compile_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fsanitize=undefined)
+target_link_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fsanitize=undefined)
 
 ### EXAMPLES ###
 

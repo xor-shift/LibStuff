@@ -39,14 +39,25 @@ TEST(GPS, GPS) {
     ASSERT_EQ(state.time->mm, 30);
     ASSERT_EQ(state.time->ss, 26);
     ASSERT_EQ(state.time->sss, 0);
+
     ASSERT_FALSE(state.date);
+
     ASSERT_TRUE(state.location);
-    //ASSERT_EQ(state.latitude.degrees, 37);
-    //ASSERT_FLOAT_EQ(state.latitude.minutes, 3.63512);
-    //ASSERT_EQ(state.longitude.degrees, 35);
-    //ASSERT_FLOAT_EQ(state.longitude.minutes, 21.05260);
-    //ASSERT_TRUE(state.direction_ok);
+
+    ASSERT_EQ(state.location->first.degrees, 37);
+    ASSERT_EQ(state.location->first.minutes, 3);
+    ASSERT_EQ(state.location->first.minutes_decimal_digits, 5);
+    ASSERT_EQ(state.location->first.minutes_decimal, 63512);
+    ASSERT_EQ(state.location->first.as_degrees(), 37.060585333333336f);
+
+    ASSERT_EQ(state.location->second.degrees, 35);
+    ASSERT_EQ(state.location->second.minutes, 21);
+    ASSERT_EQ(state.location->second.minutes_decimal_digits, 5);
+    ASSERT_EQ(state.location->second.minutes_decimal, 5260);
+    ASSERT_EQ(state.location->second.as_degrees(), 35.350876666666665f);
+
     //ASSERT_EQ(state.ns_direction, Stf::GPS::Direction::E);
     //ASSERT_EQ(state.ew_direction, Stf::GPS::Direction::N);
+
     ASSERT_EQ(state.connected_satellites, 4);
 }

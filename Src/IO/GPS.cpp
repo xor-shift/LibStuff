@@ -1,6 +1,7 @@
 #include <Stuff/IO/GPS.hpp>
+#include <Stuff/Util/Error.hpp>
 
-namespace Stf::NMEA {
+namespace Stf::GPS::Detail::NMEA {
 
 constexpr uint8_t checksum(std::string_view data) {
     uint8_t res = 0;
@@ -17,25 +18,25 @@ struct Message {
     uint8_t given_cksum;
     uint8_t calculated_cksum;
 
-    static std::optional<Message> create_from_sv(std::string_view sentence) {
+    static Error<Message, std::string_view> create_from_sv(std::string_view sentence) {
         if (sentence.ends_with("\r\n"))
             sentence.remove_suffix(2);
 
         if (sentence.size() < 4)
-            return std::nullopt;
+            return "Sentence is too small";
 
         if (sentence[0] != '$')
-            return std::nullopt;
+            return "Sentence does not start with an adequate prefix";
         sentence.remove_prefix(1);
 
         if (sentence[sentence.size() - 3] != '*')
-            return std::nullopt;
+            return "Sentence does not have a prefix delimiter";
 
         const auto cksum_str = sentence.substr(sentence.size() - 2);
         const auto cksum_opt = Stf::fast_hex_sv_to_int<uint8_t, true>(cksum_str);
 
         if (!cksum_opt)
-            return std::nullopt;
+            return "Sentence checksum mismatch";
 
         sentence.remove_suffix(3);
 
@@ -80,9 +81,9 @@ namespace Detail {
 /// The character at the position of the dot does not matter
 /// @return
 /// std::nullopt if there's a parsing error
-std::optional<Time> parse_utc_time(std::string_view segment) {
+Error<Time, std::string_view> parse_utc_time(std::string_view segment) {
     if (segment.size() != 9)
-        return std::nullopt;
+        return "String too small for a UTC time value";
 
     Time time {};
 
@@ -93,7 +94,7 @@ std::optional<Time> parse_utc_time(std::string_view segment) {
         if (auto temp = Stf::fast_sv_to_int<int, false, true>(segment.substr(start, len)); temp != std::nullopt)
             time.*ptr = *temp;
         else
-            return std::nullopt;
+            return "Failure parsing UTC time segment as an integer";
     }
 
     return time;
@@ -118,59 +119,6 @@ std::optional<Date> parse_utc_date(std::string_view segment) {
     return date;
 }
 
-/// Parses an angle in the format described:\n
-/// - if latitude then ddmm.mmmm
-/// - if longitude then dddmm.mmmm
-/*
-std::optional<Angle> parse_angle(std::string_view segment, bool longitude) {
-    // TODO: be lenient with the decimal minutes
-    if ((longitude && segment.length() < 7) || (!longitude && segment.length() < 6))
-        return std::nullopt;
-
-    Angle angle {};
-
-    const size_t longitude_offset = static_cast<size_t>(longitude);
-
-    if (auto temp = Stf::fast_sv_to_int<int, false, true>(segment.substr(0, 2 + longitude_offset));
-        temp != std::nullopt)
-        angle.degrees = *temp;
-    else
-        return std::nullopt;
-
-    const auto minutes_str = segment.substr(2 + longitude_offset);
-
-    / *const auto conv_result = std::from_chars(minutes_str.begin(), minutes_str.end(), angle.minutes,
-                                             std::chars_format::fixed);
-
-    if (conv_result.ec != std::errc())
-        return std::nullopt;* /
-
-    const auto minutes_dot = minutes_str.find('.');
-
-    if (minutes_dot == std::string_view::npos)
-        return std::nullopt;
-
-    const auto mins_whole_part = minutes_str.substr(0, minutes_dot);
-    const auto mins_decimal_part = minutes_str.substr(minutes_dot + 1);
-
-    if (auto temp = Stf::fast_sv_to_int<int, false, true>(mins_whole_part); temp)
-        angle.minutes = *temp;
-    else
-        return std::nullopt;
-
-    if (auto temp = Stf::fast_sv_to_int<int, false, true>(mins_decimal_part); temp) {
-        float f = *temp;
-        f *= std::pow<float, float>(10.f, -static_cast<float>(mins_decimal_part.size()));
-
-        angle.minutes += f;
-    } else {
-        return std::nullopt;
-    }
-
-    return angle;
-}
-*/
-
 std::optional<Angle> parse_angle(std::string_view segment, size_t degree_digits = 2) {
     auto dot_loc = segment.find('.');
 
@@ -194,10 +142,12 @@ std::optional<Angle> parse_angle(std::string_view segment, size_t degree_digits 
         || Stf::from_chars(minutes_decimal_s, minutes_decimal).ec != std::errc())
         return std::nullopt;
 
-    return { { .degrees = degrees,
+    return Angle {
+        .degrees = degrees,
         .minutes = minutes,
         .minutes_decimal_digits = static_cast<int>(minutes_decimal_s.size()),
-        .minutes_decimal = minutes_decimal } };
+        .minutes_decimal = minutes_decimal,
+    };
 }
 
 std::optional<std::pair<Direction, Direction>> parse_direction_indicators(
@@ -277,7 +227,7 @@ void GPSState::update_things(UpdateData const& data) {
 }
 
 void GPSState::feed_line(std::string_view line) {
-    const auto message_opt = NMEA::Message::create_from_sv(line);
+    const auto message_opt = Detail::NMEA::Message::create_from_sv(line);
     if (!message_opt)
         return;
 
@@ -394,165 +344,3 @@ float Angle::distance(Angle lat_0, Angle long_0, Angle lat_1, Angle long_1) {
 }
 
 }
-
-/*namespace GPS::Detail::Compat {
-
-::GPSState cpp_to_c(GPSState const& state) {
-    ::GPSState ret{
-      .time_is_ok = state.time_ok,
-      .time = {},
-      .date_is_ok = state.date_ok,
-      .date = {},
-      .location_is_ok = state.location_ok,
-      .latitude = {},
-      .longitude = {},
-      .direction_is_ok = state.direction_ok,
-      .ns_direction = {},
-      .ew_direction = {},
-      .connected_satellites = state.connected_satellites,
-    };
-
-    if (ret.time_is_ok) {
-        ret.time = GPSTime{
-          .hh = state.time.hh,
-          .mm = state.time.mm,
-          .ss = state.time.ss,
-          .sss = state.time.sss,
-        };
-    }
-
-    if (ret.date_is_ok) {
-        ret.date = GPSDate{
-          .dd = state.date.dd,
-          .mm = state.date.mm,
-          .yy = state.date.yy,
-        };
-    }
-
-    if (ret.location_is_ok) {
-        ret.latitude = GPSAngle{
-          .degrees = state.latitude.degrees,
-          .minutes = state.latitude.minutes,
-        };
-        ret.longitude = GPSAngle{
-          .degrees = state.longitude.degrees,
-          .minutes = state.longitude.minutes,
-        };
-    }
-
-    if (ret.direction_is_ok) {
-        ret.ns_direction = static_cast<GPSDirection>(static_cast<int>(state.ns_direction));
-        ret.ew_direction = static_cast<GPSDirection>(static_cast<int>(state.ew_direction));
-    }
-
-    return ret;
-}
-
-GPSState c_to_cpp(::GPSState const& state) {
-    GPSState ret;
-    if (state.time_is_ok) {
-        ret.time = Time{
-          .hh = state.time.hh,
-          .mm = state.time.mm,
-          .ss = state.time.ss,
-          .sss = state.time.sss,
-        };
-    }
-
-    if (state.date_is_ok) {
-        ret.date = Date{
-          .dd = state.date.dd,
-          .mm = state.date.mm,
-          .yy = state.date.yy,
-        };
-    }
-
-    if (state.location_is_ok) {
-        ret.latitude = Angle{
-          .degrees = state.latitude.degrees,
-          .minutes = state.latitude.minutes,
-        };
-        ret.longitude = Angle{
-          .degrees = state.longitude.degrees,
-          .minutes = state.longitude.minutes,
-        };
-    }
-
-    if (state.direction_is_ok) {
-        ret.ns_direction = static_cast<GPS::Direction>(static_cast<int>(state.ns_direction));
-        ret.ew_direction = static_cast<GPS::Direction>(static_cast<int>(state.ew_direction));
-    }
-
-    ret.connected_satellites = state.connected_satellites;
-
-    return ret;
-}
-
-}
-
-extern "C" {
-
-GPSState new_gps_state() {
-    return GPSState{
-      .time_is_ok = false,
-      .time = {},
-      .date_is_ok = false,
-      .date = {},
-      .location_is_ok = false,
-      .latitude = {},
-      .longitude = {},
-      .direction_is_ok = false,
-      .ns_direction = {},
-      .ew_direction = {},
-      .connected_satellites = 0,
-    };
-}
-
-void gps_process_line(GPSState* state, char const* line, size_t length) {
-    auto cpp_state = GPS::Detail::Compat::c_to_cpp(*state);
-    const auto view = std::string_view(line, length);
-    cpp_state.feed_line(view);
-    *state = GPS::Detail::Compat::cpp_to_c(cpp_state);
-}
-
-bool gps_get_time(GPSState const* state, GPSTime* out) {
-    if (!state->time_is_ok)
-        return false;
-
-    *out = state->time;
-    return true;
-}
-
-bool gps_get_latitude(GPSState const* state, GPSAngle* out) {
-    if (!state->location_is_ok)
-        return false;
-
-    *out = state->latitude;
-    return true;
-}
-
-bool gps_get_longitude(GPSState const* state, GPSAngle* out) {
-    if (!state->location_is_ok)
-        return false;
-
-    *out = state->longitude;
-    return true;
-}
-
-bool gps_get_ns_direction(GPSState const* state, GPSDirection* out) {
-    if (!state->direction_is_ok)
-        return false;
-
-    *out = state->ns_direction;
-    return true;
-}
-
-bool gps_get_ew_direction(GPSState const* state, GPSDirection* out) {
-    if (!state->direction_is_ok)
-        return false;
-
-    *out = state->ew_direction;
-    return true;
-}
-
-}*/

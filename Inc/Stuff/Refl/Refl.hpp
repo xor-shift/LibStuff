@@ -21,13 +21,18 @@ template<typename T, typename U> struct is_refl<std::pair<T, U>> : public std::t
 
 };
 
-#define MEMREFL_BEGIN(name, count)                              \
-    template<size_t R_I, typename = void> struct MemReflHelper; \
-    struct MemReflBaseHelper {                                  \
-        using parent_type = name;                               \
-                                                                \
-        static constexpr size_t member_count = count;           \
-        static constexpr size_t ct_base = __COUNTER__;          \
+#define MEMREFL_BEGIN(name, count)                                                                                  \
+    template<size_t R_I> constexpr auto const& get() const& { return MemReflHelper<R_I>::get(*this); }              \
+    template<size_t R_I> constexpr auto& get()& { return MemReflHelper<R_I>::get(*this); }                          \
+    template<size_t R_I> constexpr auto const&& get() const&& { return std::move(MemReflHelper<R_I>::get(*this)); } \
+    template<size_t R_I> constexpr auto&& get()&& { return std::move(MemReflHelper<R_I>::get(*this)); }             \
+                                                                                                                    \
+    template<size_t R_I, typename = void> struct MemReflHelper;                                                     \
+    struct MemReflBaseHelper {                                                                                      \
+        using parent_type = name;                                                                                   \
+                                                                                                                    \
+        static constexpr size_t member_count = count;                                                               \
+        static constexpr size_t ct_base = __COUNTER__;                                                              \
     };
 
 /*
@@ -131,7 +136,7 @@ concept TupleLike = requires(T const& self, T& mut_self, T&& rvref_self) {
                     };
 
 template<typename T>
-concept Reflectable = (InternallyReflectable<T> || ExternallyReflectable<T>/* || TupleLike<T>*/);
+concept Reflectable = (InternallyReflectable<T> || ExternallyReflectable<T> /* || TupleLike<T>*/);
 
 template<Reflectable T> struct is_refl<T> : std::true_type { };
 
@@ -143,9 +148,7 @@ template<typename T> struct member_count;
 
 template<size_t I, typename T> struct member_type;
 
-template<size_t I, typename T> struct member_name {
-    static constexpr const char* value = "<anonymous>";
-};
+template<size_t I, typename T> struct member_name { static constexpr const char* value = "<anonymous>"; };
 
 /// Internally reflectable types ///
 
@@ -195,7 +198,7 @@ template<size_t I, ExternallyReflectable T> constexpr auto&& get(T&& t) {
 
 /// Coincidentally reflectable types ///
 
-template<TupleLike T>
+/*template<TupleLike T>
 struct member_count<T> : std::tuple_size<T> { };
 
 template<size_t I, TupleLike T> struct member_name<I, T> {
@@ -212,7 +215,7 @@ template<size_t I, TupleLike T> constexpr auto& get(T& t) { return std::get<I>(t
 
 template<size_t I, TupleLike T> constexpr auto&& get(T&& t) {
     return std::move(std::get<I>(t));
-}
+}*/
 
 /// Fluff ///
 
@@ -231,16 +234,11 @@ namespace std {
 template<::Stf::Refl::Reflectable T>
 struct tuple_size<T> : integral_constant<size_t, ::Stf::Refl::member_count<T>::value> { };
 
-template<size_t I, ::Stf::Refl::Reflectable T>
-struct tuple_element<I, T> : public ::Stf::Refl::member_type<I, T> { };
+template<size_t I, ::Stf::Refl::Reflectable T> struct tuple_element<I, T> : public ::Stf::Refl::member_type<I, T> { };
 
-template<size_t I, ::Stf::Refl::Reflectable T> constexpr auto const& get(T const& t) {
-    return ::Stf::Refl::get<I>(t);
-}
+template<size_t I, ::Stf::Refl::Reflectable T> constexpr auto const& get(T const& t) { return ::Stf::Refl::get<I>(t); }
 
-template<size_t I, ::Stf::Refl::InternallyReflectable T> constexpr auto& get(T& t) {
-    return ::Stf::Refl::get<I>(t);
-}
+template<size_t I, ::Stf::Refl::InternallyReflectable T> constexpr auto& get(T& t) { return ::Stf::Refl::get<I>(t); }
 
 template<size_t I, ::Stf::Refl::InternallyReflectable T> constexpr auto&& get(T&& t) {
     return ::Stf::Refl::get<I>(std::forward<T>(t));

@@ -84,4 +84,20 @@ constexpr std::enable_if_t<std::is_unsigned_v<T>, T> reverse_bits(T v) {
     return Detail::reverse_bits_patterns<T, 0>(v);
 }
 
+template<typename T>
+constexpr T reverse_bytes(T v) {
+    auto arr = std::bit_cast<std::array<char, sizeof(T)>>(v);
+    for (size_t i = 0; i < sizeof(T) / 2; i++)
+        std::swap(arr[i], arr[sizeof(T) - i - 1]);
+    return std::bit_cast<T>(arr);
+}
+
+
+template<typename T>
+constexpr T convert_endian(T v, std::endian from, std::endian to = std::endian::native) {
+    if (to == from)
+        return v;
+    return reverse_bytes(v);
+}
+
 }

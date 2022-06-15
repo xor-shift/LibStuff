@@ -7,6 +7,41 @@
 
 namespace Unc {
 
+struct Interval {
+    uint32_t interval;
+    uint32_t offset = 0;
+    uint32_t last = 0;
+
+    constexpr bool operator()(uint32_t now) {
+        const float delta = now - last;
+
+        if (delta < interval)
+            return false;
+
+        last = now;
+
+        return true;
+    }
+};
+
+struct PerformanceTracker {
+    std::array<uint32_t, 3> counters {};
+    std::array<uint32_t, 3> reports {};
+
+    std::array<Unc::Interval, 3> intervals { { { 1000 }, { 5000 }, { 15000 } } };
+
+    void new_tick(uint32_t seconds) {
+        for (size_t i = 0; i < 3; i++) {
+            ++counters[i];
+
+            if (intervals[i](seconds)) {
+                reports[i] = counters[i];
+                counters[i] = 0;
+            }
+        }
+    }
+};
+
 // mock data to transform the passed secodns with to feed into Stuff::sin
 struct MockProp {
     std::pair<float, float> offset;
@@ -27,11 +62,6 @@ struct MockProp {
 
 struct TelemetryState {
     static constexpr float wh_capacity = 1000.f;
-
-    // health data
-    bool bms_master = false;
-    bool bms_slave = false;
-    bool engine = false;
 
     // BMS data
     static constexpr MockProp mock_battery_voltages = MockProp::from_range(2.5f, 3.7f);
@@ -63,16 +93,12 @@ struct TelemetryState {
         const auto avg = sum / static_cast<float>(range.size());
         const auto [min, max] = std::ranges::minmax(range);
 
-        return {min, max, avg};
+        return { min, max, avg };
     }
 
-    constexpr std::array<float, 3> min_max_avg_voltages() const {
-        return min_max_avg(battery_voltages);
-    }
+    constexpr std::array<float, 3> min_max_avg_voltages() const { return min_max_avg(battery_voltages); }
 
-    constexpr std::array<float, 3> min_max_avg_temperatures() const {
-        return min_max_avg(battery_temperatures);
-    }
+    constexpr std::array<float, 3> min_max_avg_temperatures() const { return min_max_avg(battery_temperatures); }
 
     void mock_tick(float seconds) {
         for (size_t i = 0; i < battery_voltages.size(); i++) {
@@ -89,24 +115,22 @@ struct TelemetryState {
         engine_current = mock_engine_current(seconds);
     }
 
-    void nextion_bump_health() const { }
-
     void nextion_bump_bms_core() const {
         const auto [low_v, high_v, avg_v] = min_max_avg_voltages();
         const auto [low_t, high_t, avg_t] = min_max_avg_temperatures();
 
         const auto percent_charge = (spent_wh / wh_capacity) * 100.f;
 
-        Stf::Nextion::set("yuksekhucre", high_v, 2);
-        Stf::Nextion::set("dusukhucre", low_v, 2);
+        Stf::Nextion::set("v_high", high_v, 2);
+        Stf::Nextion::set("v_low", low_v, 2);
 
-        Stf::Nextion::set("voltaj", avg_v, 1);
-        Stf::Nextion::set("ortalama", avg_v, 1);
-        Stf::Nextion::set("bsicaklik", avg_t, 1);
+        Stf::Nextion::set("volt", avg_v, 1);
+        Stf::Nextion::set("v_avg", avg_v, 1);
+        Stf::Nextion::set("t_avg", avg_t, 1);
 
-        Stf::Nextion::set("watthour", spent_wh, 1);
-        Stf::Nextion::set("akim", current, 1);
-        Stf::Nextion::set("soh", percent_charge, 2);
+        Stf::Nextion::set("watth", spent_wh, 1);
+        Stf::Nextion::set("curr", current, 1);
+        Stf::Nextion::set("soc", percent_charge, 2);
     }
 
     void nextion_bump_bms_arrays() const {
@@ -117,75 +141,51 @@ struct TelemetryState {
     }
 
     void nextion_bump_engine() const {
-        Stf::Nextion::set("hiz", speed, 1);
+        Stf::Nextion::set("spd", speed, 1);
         Stf::Nextion::set("msicaklik", engine_temp, 1);
         Stf::Nextion::set("mvoltaj", engine_voltage, 1);
         Stf::Nextion::set("makim", engine_current, 1);
     }
 };
 
-struct TelemetryPacket {
-    static constexpr uint16_t packet_id = 0;
+struct BMSSummaryPacket {
+    static constexpr uint16_t packet_id = 1;
 
-    MEMREFL_BEGIN(TelemetryPacket, 16)
+    MEMREFL_BEGIN(BMSSummaryPacket, 5);
 
-    float MEMREFL_DECL_MEMBER(timestamp);
-
-    // health data
-    bool MEMREFL_DECL_MEMBER(bms_master);
-    bool MEMREFL_DECL_MEMBER(bms_slave);
-    bool MEMREFL_DECL_MEMBER(engine);
-
-    // BMS data
+    uint32_t MEMREFL_DECL_MEMBER(timestamp);
     std::array<float, 3> MEMREFL_DECL_MEMBER(min_max_avg_battery_voltage);
     std::array<float, 3> MEMREFL_DECL_MEMBER(min_max_avg_battery_temperature);
     float MEMREFL_DECL_MEMBER(spent_wh);
     float MEMREFL_DECL_MEMBER(current);
+};
 
-    // engine data
+struct EngineSummaryPacket {
+    static constexpr uint16_t packet_id = 2;
+
+    MEMREFL_BEGIN(EngineSummaryPacket, 5);
+
+    uint32_t MEMREFL_DECL_MEMBER(timestamp);
     float MEMREFL_DECL_MEMBER(speed);
     float MEMREFL_DECL_MEMBER(engine_temp);
     float MEMREFL_DECL_MEMBER(engine_voltage);
     float MEMREFL_DECL_MEMBER(engine_current);
+};
 
-    // locally observed data
+struct LocalObservationsPacket {
+    static constexpr uint16_t packet_id = 3;
+
+    MEMREFL_BEGIN(LocalObservationsPacket, 5);
+
+    uint32_t MEMREFL_DECL_MEMBER(timestamp);
     std::pair<float, float> MEMREFL_DECL_MEMBER(gps_coords);
     Stf::Vector<float, 3> MEMREFL_DECL_MEMBER(acceleration);
     Stf::Vector<float, 3> MEMREFL_DECL_MEMBER(gyro);
     float MEMREFL_DECL_MEMBER(temperature);
-
-    static constexpr TelemetryPacket from_state(float seconds, TelemetryState const& state) {
-        TelemetryPacket ret {
-            .timestamp = seconds,
-
-            .bms_master = state.bms_master,
-            .bms_slave = state.bms_slave,
-            .engine = state.engine,
-
-            .min_max_avg_battery_voltage = state.min_max_avg_voltages(),
-            .min_max_avg_battery_temperature = state.min_max_avg_temperatures(),
-            .spent_wh = state.spent_wh,
-            .current = state.current,
-
-            .speed = state.speed,
-            .engine_temp = state.engine_temp,
-            .engine_voltage = state.engine_voltage,
-            .engine_current = state.engine_current,
-
-            .gps_coords = {0.f, 0.f},
-        };
-
-        if (state.gps_state.location) {
-            ret.gps_coords.first = state.gps_state.location->first.as_degrees();
-            ret.gps_coords.second = state.gps_state.location->second.as_degrees();
-        }
-
-        return ret;
-    }
 };
 
 struct BatteryArraysPacket {
-    static constexpr uint16_t packet_id = 1;
+    static constexpr uint16_t packet_id = 4;
 
     MEMREFL_BEGIN(BatteryArraysPacket, 7)
 
@@ -230,10 +230,11 @@ struct BatteryArraysPacket {
 };
 
 struct DebugMetricsPacket {
-    static constexpr uint16_t packet_id = 2;
+    static constexpr uint16_t packet_id = 0xFFFE;
 
-    MEMREFL_BEGIN(DebugMetricsPacket, 2)
+    MEMREFL_BEGIN(DebugMetricsPacket, 3)
 
+    uint32_t MEMREFL_DECL_MEMBER(timestamp);
     std::array<uint32_t, 3> MEMREFL_DECL_MEMBER(performance_report);
     std::array<char, 77> MEMREFL_DECL_MEMBER(gps_last_received_line);
 };

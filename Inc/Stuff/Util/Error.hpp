@@ -5,34 +5,45 @@
 
 namespace Stf {
 
-template<typename T, typename Err> struct ErrorOr {
+template<typename T, typename Err> struct Error : public std::variant<T, Err> {
+    template<typename... Us>
+    constexpr Error(Us&&... v)
+        : std::variant<T, Err>(std::forward<Us>(v)...) { }
 
-    constexpr ErrorOr(Err&& error)
-        : m_value(std::forward<Err>(error)) {    }
+    constexpr bool is_error() const { return std::holds_alternative<Err>(*this); }
+    constexpr bool has_value() const { return std::holds_alternative<T>(*this); }
+    constexpr operator bool() const { return has_value(); }
 
-    constexpr ErrorOr(Err const& error)
-        : m_value(error) { }
+    constexpr T const& value() const& { return std::get<T>(*this); }
+    constexpr T& value() & { return std::get<T>(*this); }
+    constexpr T const&& value() && { return std::move(std::get<T>(*this)); }
+    constexpr T&& value() const&& { return std::move(std::get<T>(*this)); }
 
-    constexpr ErrorOr(T&& value)
-        : m_value(std::forward<T>(value)) {    }
+    constexpr Err const& error() const& { return std::get<Err>(*this); }
+    constexpr Err& error() & { return std::get<Err>(*this); }
+    constexpr Err const&& error() && { return std::move(std::get<Err>(*this)); }
+    constexpr Err&& error() const&& { return std::move(std::get<Err>(*this)); }
 
-    constexpr ErrorOr(T const& value)
-        : m_value(value) { }
+    constexpr const T* operator->() const noexcept { return std::addressof(value()); }
+    constexpr T* operator->() noexcept { return std::addressof(value()); }
+    constexpr const T& operator*() const& noexcept { return value(); }
+    constexpr T& operator*() & noexcept { return value(); }
+    constexpr const T&& operator*() const&& noexcept { return std::move(value()); }
+    constexpr T&& operator*() && noexcept { return std::move(value()); }
 
-private:
-    std::variant<T, Err> m_value;
+    // template<typename U> constexpr T value_or(U&& v) const& { return has_value() ? }
 };
 
-template<typename T> struct ErrorOr<T, void> {
+#define unwrap(to, src_expr)      \
+    if (auto res = src_expr; res) \
+        to = *res;                \
+    else                          \
+        for (;;)                  \
+            std::abort();
 
-    constexpr ErrorOr(T&& value)
-        : m_value(std::forward<T>(value)) {    }
-
-    constexpr ErrorOr(T const& value)
-        : m_value(value) { }
-
-private:
-    std::optional<T> m_value;
-};
-
+#define unwrap_or_return(to, src_expr, ret_expr) \
+    if (auto res = src_expr; res)                \
+        to = *res;                               \
+    else                                         \
+        return ret_expr
 }

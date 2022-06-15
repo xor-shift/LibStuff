@@ -52,7 +52,9 @@ struct PacketManagerBase {
         MEMREFL_MEMBER(token);
     };
 
-    std::array<uint8_t, TxBufSize> tx_buf;
+    size_t initial_drop_size = 3;
+    size_t remaining_drops = initial_drop_size;
+    std::array<uint8_t, TxBufSize> tx_buf {};
     Stf::Delim::ByteReader<RxBufSize, 1> rx_reader {
         .delimiter = { 0 },
     };
@@ -87,6 +89,11 @@ struct PacketManagerBase {
     }
 
     void rx_byte(uint8_t b) {
+        /*if (remaining_drops != 0) {
+            --remaining_drops;
+            return;
+        }*/
+
         if (rx_reader.update(b))
             return;
 

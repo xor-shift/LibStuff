@@ -95,7 +95,16 @@ TEST(Serde, Serde) {
 
     std::array<uint8_t, Stf::serialized_size_v<decltype(a)>> a_ser;
     Stf::serialize(a_ser.begin(), a);
-    std::array<uint8_t, Stf::serialized_size_v<decltype(b)>> b_ser;
+
+    InternallyReflectableStruct a_deser {};
+    const auto it = Stf::deserialize(a_deser, a_ser.cbegin());
+    // ASSERT_EQ(res, Stuff::DeserializeResult::Ok);
+    ASSERT_EQ(it, a_ser.cend());
+    ASSERT_EQ(a_deser.a, a.a);
+    ASSERT_EQ(a_deser.b, a.b);
+
+
+    /*std::array<uint8_t, Stf::serialized_size_v<decltype(b)>> b_ser;
     Stf::serialize(b_ser.begin(), b);
 
     ASSERT_EQ(a_ser.size(), b_ser.size());
@@ -104,14 +113,7 @@ TEST(Serde, Serde) {
     for (size_t i = 0; i < a_ser.size(); i++)
         all_bytes_are_equal &= a_ser[i] == b_ser[i];
 
-    ASSERT_TRUE(all_bytes_are_equal);
-
-    InternallyReflectableStruct a_deser {};
-    const auto it = Stf::deserialize(a_deser, b_ser.cbegin());
-    // ASSERT_EQ(res, Stuff::DeserializeResult::Ok);
-    ASSERT_EQ(it, b_ser.cend());
-    ASSERT_EQ(a_deser.a, a.a);
-    ASSERT_EQ(a_deser.b, a.b);
+    ASSERT_TRUE(all_bytes_are_equal);*/
 }
 
 struct ComprehensiveBase {

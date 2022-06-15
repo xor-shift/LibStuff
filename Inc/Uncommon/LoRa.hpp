@@ -185,6 +185,7 @@ struct Lora {
     };
 
     void wait_aux(GPIO_PinState state = GPIO_PIN_SET) const {
+        HAL_Delay(3);
         for (;;) {
             bool res = HAL_GPIO_ReadPin(aux_port, aux_pin) == state;
             if (res)
@@ -215,55 +216,55 @@ struct Lora {
         WirelessConfiguration = 0xCF,
     };
 
-    int read_registers(auto out_it, uint8_t address, uint8_t size, bool request = true) {
+    Stf::Error<bool, std::string_view> read_registers(auto out_it, uint8_t address, uint8_t size, bool request = true) {
         std::array<uint8_t, 3> expected_command { 0xC1, address, size };
         std::array<uint8_t, 3> received_command {};
         std::array<uint8_t, 16> recv_buf {};
 
         if (request && (HAL_UART_Transmit(&huart, expected_command.data(), expected_command.size(), 30) != HAL_OK))
-            return 1;
+            return "Timed out transmitting command";
 
-        if (HAL_UART_Receive(&huart, received_command.data(), received_command.size(), 30) != HAL_OK)
-            return 2;
+        if (request && (HAL_UART_Receive(&huart, received_command.data(), received_command.size(), 30) != HAL_OK))
+            return "Timed out receiving command";
 
         if (expected_command != received_command)
-            return 3;
+            return "Didn't receive expected command";
 
         if (HAL_UART_Receive(&huart, recv_buf.data(), size, 140) != HAL_OK)
-            return 4;
+            return "Timed out receiving register data";
 
         std::copy_n(recv_buf.cbegin(), size, out_it);
-        return 0;
+        return true;
     }
 
-    std::optional<E22Config> read_configuration() {
-        const auto guard = guarded_set_mode(Mode::Configuration);
+    Stf::Error<E22Config, std::string_view> read_configuration() {
+        // const auto guard = guarded_set_mode(Mode::Configuration);
 
         std::array<uint8_t, 7> read_buf {};
-        if (read_registers(read_buf.begin(), 0, 7, true))
-            return std::nullopt;
+        if (const auto res = read_registers(read_buf.begin(), 0, 7, true); res.is_error())
+            return res.error();
 
         return E22Config::disassemble(std::span<const uint8_t, 7>(read_buf.data(), 7));
     }
 
-    std::optional<E22Config> configure(E22Config config) {
-        const auto guard = guarded_set_mode(Mode::Configuration);
+    Stf::Error<std::pair<E22Config, std::array<uint8_t, 7>>, std::string_view> configure(E22Config config) {
+        // const auto guard = guarded_set_mode(Mode::Configuration);
 
-        std::array<uint8_t, 3> command_buf { 0xC0, 0x00, 0x07 };
+        std::array<uint8_t, 3> command_buf { 0xC2, 0x00, 0x07 };
 
         auto assembled = config.assemble();
 
         if (HAL_UART_Transmit(&huart, command_buf.data(), command_buf.size(), 30) != HAL_OK)
-            return std::nullopt;
+            return "Transmitting command timed out";
 
         if (HAL_UART_Transmit(&huart, assembled.data(), 7, 60) != HAL_OK)
-            return std::nullopt;
+            return "Transmitting command contents timed out";
 
         std::array<uint8_t, 7> read_buf {};
-        if (read_registers(read_buf.begin(), 0, 7, false))
-            return std::nullopt;
+        if (const auto res = read_registers(read_buf.begin(), 0, 7, false); res.is_error())
+            return res.error();
 
-        return E22Config::disassemble(std::span<const uint8_t, 7>(read_buf.data(), 7));
+        return std::pair{E22Config::disassemble(std::span<const uint8_t, 7>(read_buf.data(), 7)), read_buf};
     }
 };
 

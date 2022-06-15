@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <numeric>
 
 namespace Stf::IO::ACS {
 
@@ -15,47 +16,55 @@ enum class Type : int {
     U200,
 };
 
-template<typename Reader>
-struct ACSHandle {
-    Reader reader;
+struct ACS {
     Type type;
     float zero_point;
+    float voltage_ceil = 3.3f;
+    float voltage_division = 4096.f;
+
+    size_t bump_counter = 0;
+    std::array<float, 8> averaging_window {};
+    size_t window_ptr = 0;
 
     float get_sensitivity() {
         switch (type) {
-            case Type::B50: return 40.f;
-            case Type::U50: return 60.f;
-            case Type::B100: return 20.f;
-            case Type::U100: return 40.f;
-            case Type::B150: return 13.333f;
-            case Type::U150: return 26.667f;
-            case Type::B200: return 10.f;
-            case Type::U200: return 20.f;
+        case Type::B50:
+            return 40.f;
+        case Type::U50:
+            return 60.f;
+        case Type::B100:
+            return 20.f;
+        case Type::U100:
+            return 40.f;
+        case Type::B150:
+            return 13.333f;
+        case Type::U150:
+            return 26.667f;
+        case Type::B200:
+            return 10.f;
+        case Type::U200:
+            return 20.f;
         }
     }
 
-    float measure_single_raw() {
-        return static_cast<float>(std::invoke(reader)) * (3.3f / 4095.f);
+    constexpr float get_averaged_voltage() {
+        const auto sum = std::reduce(
+            averaging_window.cbegin(), averaging_window.cbegin() + std::min(averaging_window.size(), bump_counter));
+        return sum / averaging_window.size();
     }
 
-    float averaged_measurement(size_t n_runs = 1) {
-        if (n_runs <= 1)
-            return measure_single_raw();
-
-        float sum = 0.f;
-        for (size_t i = 0; i < n_runs; i++)
-            sum += measure_single_raw();
-
-        return sum / static_cast<float>(n_runs);
+    constexpr void bump(float voltage) {
+        averaging_window[window_ptr] = voltage * (voltage_ceil / voltage_division);
+        ++window_ptr %= averaging_window.size();
+        ++bump_counter;
     }
 
-    template<bool use_zero_pt = false>
-    float measure_amperes(size_t n_runs = 1) {
-        const auto measurement = averaged_measurement(n_runs);
+    float measure_amperes(bool use_zero_pt = false) {
+        const auto measurement = get_averaged_voltage();
 
         float normalized;
 
-        if constexpr (use_zero_pt)
+        if (use_zero_pt)
             normalized = measurement - zero_point;
         else
             normalized = measurement - (3.3f / 2.f);

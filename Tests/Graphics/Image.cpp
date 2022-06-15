@@ -28,10 +28,8 @@ TEST(Image, QoI) {
 
     ifs.open(in_qoi, std::ios::binary);
     ASSERT_TRUE(ifs);
-    std::vector<uint8_t> vec_in_qoi { std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>() };
+    auto res_in_qoi = Stf::Gfx::Formats::QoI::decode(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
     ifs.close();
-
-    auto res_in_qoi = Stf::Gfx::Formats::QoI::decode(std::span(vec_in_qoi));
     ASSERT_TRUE(res_in_qoi);
     auto& img_in_qoi = *res_in_qoi;
 

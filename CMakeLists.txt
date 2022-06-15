@@ -85,6 +85,18 @@ target_link_libraries(${PROJECT_NAME}_tests
 target_compile_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fsanitize=undefined)
 target_link_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fsanitize=undefined)
 
+### BENCHMARKS ###
+
+add_subdirectory(Thirdparty/benchmark)
+
+add_executable(${PROJECT_NAME}_benchmark_qoi
+        Benchmarks/Gfx/Image/QoI.cpp
+        )
+
+target_link_libraries(${PROJECT_NAME}_benchmark_qoi
+        benchmark
+        ${PROJECT_NAME})
+
 ### EXAMPLES ###
 
 add_executable(${PROJECT_NAME}_examples_GPS

@@ -4,38 +4,31 @@
 
 #include <Stuff/Graphics/Image.hpp>
 
-#define STF_ASSERT(expr)                     \
-    {                                        \
-        for (bool res = bool(expr); !res;) { \
-            std::abort();                    \
-        }                                    \
+#define DO_ASSERT(expr)                        \
+    {                                          \
+        for (bool _res = bool(expr); !_res;) { \
+            std::abort();                      \
+        }                                      \
     }
 
-static void benchmark_qoi_decode_span(benchmark::State& state) {
-    std::ifstream image_ifs("Tests/Graphics/Images/testcard.qoi", std::ios::binary | std::ios::in);
-    STF_ASSERT(image_ifs);
+static void benchmark_qoi_generic(benchmark::State& state, size_t width, size_t height, const char* file) {
+    std::ifstream image_ifs(file, std::ios::binary | std::ios::in);
+    DO_ASSERT(image_ifs);
 
-    std::vector<uint8_t> qoi_data(std::istreambuf_iterator<char>{image_ifs}, std::istreambuf_iterator<char>());
-    Stf::Gfx::Image image(256, 256);
+    std::vector<uint8_t> qoi_data(std::istreambuf_iterator<char> { image_ifs }, std::istreambuf_iterator<char>());
+    Stf::Gfx::Image image(width, height);
+
     for (auto _ : state) {
-        Stf::Gfx::Formats::QoI::decode_into(std::span(qoi_data), image);
+        const auto res = Stf::Gfx::Formats::QoI::decode(qoi_data.begin(), qoi_data.end(), image);
+#ifndef NDEBUG
+        DO_ASSERT(res)
+#endif
     }
 }
 
-BENCHMARK(benchmark_qoi_decode_span);
-
-static void benchmark_qoi_decode_inputiter(benchmark::State& state) {
-    std::ifstream image_ifs("Tests/Graphics/Images/testcard.qoi", std::ios::binary | std::ios::in);
-    STF_ASSERT(image_ifs);
-
-    std::vector<uint8_t> qoi_data(std::istreambuf_iterator<char>{image_ifs}, std::istreambuf_iterator<char>());
-    Stf::Gfx::Image image(256, 256);
-    for (auto _ : state) {
-        Stf::Gfx::Formats::QoI::decode_into(qoi_data.begin(), qoi_data.end(), image);
-    }
-}
-
-BENCHMARK(benchmark_qoi_decode_inputiter);
-
+static void benchmark_qoi_dice(benchmark::State& state) { benchmark_qoi_generic(state, 800, 600, "Tests/Graphics/Images/dice.qoi"); }
+BENCHMARK(benchmark_qoi_dice);
+static void benchmark_qoi_testcard(benchmark::State& state) { benchmark_qoi_generic(state, 256, 256, "Tests/Graphics/Images/testcard.qoi"); }
+BENCHMARK(benchmark_qoi_testcard);
 
 BENCHMARK_MAIN();

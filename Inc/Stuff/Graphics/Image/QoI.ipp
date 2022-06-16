@@ -309,61 +309,10 @@ struct QoIDecoder {
     }
 };
 
-template<typename Allocator = std::allocator<uint8_t>>
-constexpr std::optional<std::string_view> decode_into(std::span<const uint8_t> payload, Gfx::Image<Allocator>& image) {
+template<std::input_iterator IIter> constexpr Error<IIter, std::string_view> decode_payload(IIter it, IIter end, std::span<uint8_t> out_image_data) {
     QoIDecoder state {
-        .out_beg = image.data(),
-        .out_end = image.data() + image.size(),
-    };
-
-    for (auto in_p = payload.begin(); in_p != payload.end();) {
-        std::array<uint8_t, 4> extra_data = state.last_seen;
-
-        uint8_t leading = *in_p++;
-        const auto type = block_type(leading);
-        const auto extra_size = extra_data_size(type);
-        std::copy_n(in_p, extra_size, extra_data.begin());
-        in_p += extra_size;
-
-        if (!state.process_block(leading, extra_data))
-            return "Overflow while reading QoI blocks";
-    }
-
-    if (state.it != state.out_end)
-        return "Insufficient data (Incomplete image)";
-
-    return std::nullopt;
-}
-
-template<typename Allocator = std::allocator<uint8_t>>
-constexpr Error<Gfx::Image<Allocator>, std::string_view> decode(std::span<const uint8_t> encoded, Allocator const& allocator = Allocator()) {
-    if (encoded.size() < 14 + 8)
-        return "Insufficient data";
-
-    const auto header_span = encoded.subspan(0, 14);
-    const auto payload_span = encoded.subspan(14, encoded.size() - 14 - 8);
-    const auto ending_span = encoded.subspan(encoded.size() - 8, 8);
-
-    Header header;
-    unwrap_or_return(header, Header::from_bytes(header_span.begin(), header_span.end()), res.error());
-
-    Gfx::Image<Allocator> image(header.dims[0], header.dims[1], allocator);
-
-    if (auto res = decode_into(payload_span, image); res)
-        return *res;
-
-    if (!std::all_of(ending_span.begin(), ending_span.end() - 1, [](auto v) { return v == 0x00; }) || ending_span.back() != 0x01)
-        return "Bad ending bytes";
-
-    return image;
-}
-
-
-template<typename Allocator = std::allocator<uint8_t>, std::input_iterator IIter>
-constexpr Error<IIter, std::string_view> decode_into(IIter it, IIter end, Gfx::Image<Allocator>& image) {
-    QoIDecoder state {
-        .out_beg = image.data(),
-        .out_end = image.data() + image.size(),
+        .out_beg = out_image_data.data(),
+        .out_end = out_image_data.data() + out_image_data.size(),
     };
 
     while (state.it != state.out_end) {
@@ -390,15 +339,22 @@ constexpr Error<IIter, std::string_view> decode_into(IIter it, IIter end, Gfx::I
 }
 
 template<typename Allocator = std::allocator<uint8_t>, std::input_iterator IIter>
-constexpr Error<Gfx::Image<Allocator>, std::string_view> decode(IIter begin, IIter end, Allocator const& allocator = Allocator()) {
+constexpr Error<IIter, std::string_view> decode(IIter begin, IIter end, Gfx::Image<Allocator>& image, std::optional<Header> given_header = std::nullopt) {
     IIter it = begin;
 
     Header header;
-    unwrap_or_return(header, Header::from_bytes(std::forward<IIter>(it), end), res.error());
+    if (given_header)
+        header = *given_header;
+    else
+        unwrap_or_return(header, Header::from_bytes(std::forward<IIter>(it), end), res.error());
 
-    Gfx::Image<Allocator> image(header.dims[0], header.dims[1], allocator);
+    const auto [i_w, i_h] = image.dimensions();
+    const auto [h_w, h_h] = header.dims;
 
-    unwrap_or_return(it, decode_into(it, end, image), res.error());
+    if (i_w != h_w || i_h != h_h)
+        return "Image metadata does not match header metadata";
+
+    unwrap_or_return(it, decode_payload(it, end, image), res.error());
 
     for (size_t i = 0; i < 7; i++) {
         if (it == end)
@@ -406,6 +362,19 @@ constexpr Error<Gfx::Image<Allocator>, std::string_view> decode(IIter begin, IIt
         if (*it++ != 0)
             return "Bad ending bytes";
     }
+
+    return it;
+}
+
+template<typename Allocator = std::allocator<uint8_t>, std::input_iterator IIter>
+constexpr Error<Gfx::Image<Allocator>, std::string_view> decode(IIter begin, IIter end, Allocator const& allocator = Allocator()) {
+    IIter it = begin;
+
+    Header header;
+    unwrap_or_return(header, Header::from_bytes(std::forward<IIter>(it), end), res.error());
+
+    Gfx::Image<Allocator> image(header.dims[0], header.dims[1], allocator);
+    unwrap_or_return(std::ignore, decode(it, end, image, header), res.error());
 
     return image;
 }
@@ -428,22 +397,19 @@ constexpr void encode(OIter out_beg, Gfx::Image<Allocator> const& image) {
         run_length = 0;
     };
 
-    /*const auto emit_run = [&](color_type pixel) {
-
-        if (run_length >= 60) {
+    const auto emit_run = [&](color_type pixel) {
+        if (run_length >= 62)
             do_emit_run();
-        }
 
         if (pixel == last_seen) {
             ++run_length;
             return true;
         } else if (run_length != 0) {
             do_emit_run();
-            return false;
         }
 
         return false;
-    };*/
+    };
 
     const auto emit_rgba = [&](color_type pixel) {
         bool emit_alpha = pixel[3] != last_seen[3];
@@ -468,6 +434,9 @@ constexpr void encode(OIter out_beg, Gfx::Image<Allocator> const& image) {
     };
 
     const auto emit_diff = [&](color_type pixel) -> bool {
+        if (pixel[3] != last_seen[3])
+            return false;
+
         std::array<int, 3> deltas {
             pixel[0] - last_seen[0],
             pixel[1] - last_seen[1],
@@ -488,6 +457,9 @@ constexpr void encode(OIter out_beg, Gfx::Image<Allocator> const& image) {
     };
 
     const auto emit_luma = [&](color_type pixel) -> bool {
+        if (pixel[3] != last_seen[3])
+            return false;
+
         const auto dg = pixel[1] - last_seen[1];
         const auto dr = pixel[0] - last_seen[0] - dg;
         const auto db = pixel[2] - last_seen[2] - dg;
@@ -509,17 +481,9 @@ constexpr void encode(OIter out_beg, Gfx::Image<Allocator> const& image) {
         const auto cur = image.get_pixel(i);
         const auto cur_hash = QoIColorMap::hash(cur);
 
-        if (run_length >= 62)
-            do_emit_run();
-
-        if (cur == last_seen) {
-            ++run_length;
-            continue;
-        } else if (run_length != 0) {
-            do_emit_run();
-        }
-
-        if (emit_index(cur, cur_hash))
+        if (emit_run(cur))
+            std::ignore = std::ignore;
+        else if (emit_index(cur, cur_hash))
             std::ignore = std::ignore;
         else if (emit_diff(cur))
             std::ignore = std::ignore;
@@ -544,7 +508,6 @@ constexpr void encode(OIter out_beg, Gfx::Image<Allocator> const& image) {
 namespace Stf::Gfx::Formats::QoI {
 
 using Gfx::Detail::Image::QoI::decode;
-using Gfx::Detail::Image::QoI::decode_into;
 using Gfx::Detail::Image::QoI::encode;
 
 }

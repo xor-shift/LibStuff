@@ -47,3 +47,13 @@ template<typename T, typename Err> struct Error : public std::variant<T, Err> {
     else                                         \
         return ret_expr
 }
+
+#ifdef GOOGLETEST_INCLUDE_GTEST_GTEST_H_
+
+#    define ASSERT_NO_ERROR(expr)                                                                                \
+        if (expr.is_error()) {                                                                                   \
+            std::cerr << "ASSERT_NO_ERROR for " << #expr << " failed with error: " << expr.error() << std::endl; \
+            ASSERT_TRUE(expr);                                                                                   \
+        }
+
+#endif

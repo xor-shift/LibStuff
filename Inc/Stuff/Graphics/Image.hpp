@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <array>
+#include <iterator>
 #include <memory>
+#include <span>
 
 #include <Stuff/Maths/Maths.hpp>
 #include <Stuff/Util/Util.hpp>
@@ -129,3 +131,6 @@ private:
 }
 
 #include "./Image/QoI.ipp"
+// #include "./Image/TGA.ipp"
+
+namespace Gfx = Stf::Gfx;

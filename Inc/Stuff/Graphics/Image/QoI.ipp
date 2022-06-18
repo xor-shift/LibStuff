@@ -1,7 +1,4 @@
-#pragma once
-
-#include <iterator>
-#include <span>
+#include <Stuff/Files/Format.hpp>
 
 // types etc.
 namespace Stf::Gfx::Detail::Image::QoI {
@@ -70,30 +67,36 @@ enum class ColorSpace {
 };
 
 struct RawHeader {
-    uint8_t magic[4];
+    std::array<uint8_t, 4> magic;
     uint32_t width;
     uint32_t height;
     uint8_t channels;
     uint8_t colorspace;
 
     template<std::input_iterator IIter> static constexpr Error<RawHeader, std::string_view> from_bytes(IIter&& begin, IIter end) {
-        std::array<uint8_t, 4> magic_bytes;
-        unwrap_or_return(magic_bytes, get_bytes<4>(std::forward<IIter>(begin), end), "Failed to read magic");
-        std::array<uint8_t, 4> width_bytes;
-        unwrap_or_return(width_bytes, get_bytes<4>(std::forward<IIter>(begin), end), "Failed to read width");
-        std::array<uint8_t, 4> height_bytes;
-        unwrap_or_return(height_bytes, get_bytes<4>(std::forward<IIter>(begin), end), "Failed to read height");
-        std::array<uint8_t, 2> info_bytes;
-        unwrap_or_return(info_bytes, get_bytes<2>(std::forward<IIter>(begin), end), "Failed to read image information");
+        using namespace FFormat;
 
-        RawHeader header;
-        std::copy_n(magic_bytes.begin(), 4, header.magic);
-        header.width = convert_endian(std::bit_cast<uint32_t>(width_bytes), std::endian::big);
-        header.height = convert_endian(std::bit_cast<uint32_t>(height_bytes), std::endian::big);
-        header.channels = info_bytes[0];
-        header.colorspace = info_bytes[1];
+        constexpr auto header_format = FFormat::group_field()
+            << name_field(make_array_field<4>(primitive_field<Primitive::U8>()), "magic") << name_field(primitive_field<Primitive::U32BE>(), "width")
+            << name_field(primitive_field<Primitive::U32BE>(), "height") << name_field(primitive_field<Primitive::U8>(), "channels")
+            << name_field(primitive_field<Primitive::U8>(), "colorspace");
 
-        return header;
+        using header_format_type = decltype(header_format);
+
+        header_format_type::representation_type header_tuple;
+        auto res = header_format.template decode(begin, end, header_tuple);
+        if (!res)
+            return "Failed to read header";
+
+        begin = *res;
+
+        return RawHeader{
+            .magic = std::get<0>(header_tuple),
+            .width = std::get<1>(header_tuple),
+            .height = std::get<2>(header_tuple),
+            .channels = std::get<3>(header_tuple),
+            .colorspace = std::get<4>(header_tuple),
+        };
     }
 
     constexpr std::array<uint8_t, 14> to_bytes() const {
@@ -102,7 +105,7 @@ struct RawHeader {
         const auto w_bytes = std::bit_cast<std::array<char, 4>>(Stf::convert_endian(width, std::endian::native, std::endian::big));
         const auto h_bytes = std::bit_cast<std::array<char, 4>>(Stf::convert_endian(height, std::endian::native, std::endian::big));
 
-        std::copy_n(magic, 4, ret.begin());
+        std::copy_n(magic.begin(), 4, ret.begin());
         std::ranges::copy(w_bytes, ret.begin() + 4);
         std::ranges::copy(h_bytes, ret.begin() + 8);
         ret[12] = channels;
@@ -130,7 +133,7 @@ struct Header {
     static constexpr Error<Header, std::string_view> from_raw(RawHeader const& raw_header) {
         constexpr std::array<char, 4> expected_magic { 'q', 'o', 'i', 'f' };
         std::array<char, 4> given_magic {};
-        std::copy_n(raw_header.magic, 4, given_magic.begin());
+        std::copy_n(raw_header.magic.begin(), 4, given_magic.begin());
 
         if (expected_magic != given_magic) {
             return "Bad header magic";
@@ -380,9 +383,9 @@ constexpr Error<Gfx::Image<Allocator>, std::string_view> decode(IIter begin, IIt
 }
 
 template<typename Allocator = std::allocator<uint8_t>, std::output_iterator<uint8_t> OIter>
-constexpr void encode(OIter out_beg, Gfx::Image<Allocator> const& image) {
+constexpr Error<OIter, std::string_view> encode(OIter out_beg, Gfx::Image<Allocator> const& image) {
     Header header;
-    unwrap_or_return(header, Header::from_image(image), );
+    unwrap_or_return(header, Header::from_image(image), res.error());
     const auto header_bytes = header.to_bytes();
 
     using color_type = QoIColorMap::color_type;
@@ -501,6 +504,8 @@ constexpr void encode(OIter out_beg, Gfx::Image<Allocator> const& image) {
 
     out_it = std::fill_n(out_it, 7, 0);
     *out_it++ = 1;
+
+    return out_it;
 }
 
 }

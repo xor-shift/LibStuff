@@ -5,6 +5,8 @@
 #include <Stuff/Graphics/Image.hpp>
 #include <Stuff/Maths/CRC.hpp>
 
+#include <Stuff/Files/Format.hpp>
+
 TEST(Image, Idk) {
     Stf::Gfx::Image image(4, 8, Stf::Gfx::Colors::black);
 
@@ -92,6 +94,8 @@ struct QoITest {
 };
 
 TEST(Image, QoI) {
+    Stf::FFormat::asd();
+
     QoITest {
         .decoded_cksum = 0x5E6D564Eul,
         .in_qoi = "Tests/Graphics/Images/testcard.qoi",

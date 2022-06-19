@@ -51,23 +51,19 @@ struct Foo {
 
 */
 
-#define MEMREFL_MEMBER(name)                                                                                        \
-    template<size_t R_I>                                                                                            \
-    struct MemReflHelper<R_I, std::enable_if_t<R_I == (__COUNTER__ - MemReflBaseHelper::ct_base - 1)>> {            \
-        using value_type = decltype(MemReflBaseHelper::parent_type::name);                                          \
-        static constexpr std::string_view member_name = #name;                                                      \
-                                                                                                                    \
-        static constexpr value_type const& get(typename MemReflBaseHelper::parent_type const& p) { return p.name; } \
-                                                                                                                    \
-        static constexpr std::enable_if_t<!std::is_const_v<value_type>, value_type&> get(                           \
-            typename MemReflBaseHelper::parent_type& p) {                                                           \
-            return p.name;                                                                                          \
-        }                                                                                                           \
-                                                                                                                    \
-        static constexpr std::enable_if_t<!std::is_const_v<value_type>, value_type&&> get(                          \
-            typename MemReflBaseHelper::parent_type&& p) {                                                          \
-            return std::move(p.name);                                                                               \
-        }                                                                                                           \
+#define MEMREFL_MEMBER(name)                                                                                                                            \
+    template<size_t R_I> struct MemReflHelper<R_I, std::enable_if_t<R_I == (__COUNTER__ - MemReflBaseHelper::ct_base - 1)>> {                           \
+        using value_type = decltype(MemReflBaseHelper::parent_type::name);                                                                              \
+        static constexpr std::string_view member_name = #name;                                                                                          \
+                                                                                                                                                        \
+        static constexpr value_type const& get(typename MemReflBaseHelper::parent_type const& p) { return p.name; }                                     \
+        static constexpr value_type const&& get(typename MemReflBaseHelper::parent_type const&& p) { return std::move(p.name); }                        \
+                                                                                                                                                        \
+        static constexpr std::enable_if_t<!std::is_const_v<value_type>, value_type&> get(typename MemReflBaseHelper::parent_type& p) { return p.name; } \
+                                                                                                                                                        \
+        static constexpr std::enable_if_t<!std::is_const_v<value_type>, value_type&&> get(typename MemReflBaseHelper::parent_type&& p) {                \
+            return std::move(p.name);                                                                                                                   \
+        }                                                                                                                                               \
     };
 
 #define MEMREFL_DECL_MEMBER(name) \
@@ -90,31 +86,28 @@ template<size_t I, typename T> struct ExtReflHelper;
     };                                                 \
     }
 
-#define EXTREFL_MEMBER(name, member)                                                                                   \
-    namespace Stf::Refl {                                                                                              \
-    template<> struct ExtReflHelper<__COUNTER__ - ExtReflBaseHelper<name>::ct_base - 1, name> {                        \
-        using value_type = decltype(name::member);                                                                     \
-        static constexpr std::string_view member_name = #name;                                                         \
-                                                                                                                       \
-        static constexpr value_type const& get(name const& p) { return p.member; }                                     \
-                                                                                                                       \
-        static constexpr std::enable_if_t<!std::is_const_v<value_type>, value_type&> get(name& p) { return p.member; } \
-                                                                                                                       \
-        static constexpr std::enable_if_t<!std::is_const_v<value_type>, value_type&&> get(name&& p) {                  \
-            return std::move(p.member);                                                                                \
-        }                                                                                                              \
-    };                                                                                                                 \
+#define EXTREFL_MEMBER(name, member)                                                                                                \
+    namespace Stf::Refl {                                                                                                           \
+    template<> struct ExtReflHelper<__COUNTER__ - ExtReflBaseHelper<name>::ct_base - 1, name> {                                     \
+        using value_type = decltype(name::member);                                                                                  \
+        static constexpr std::string_view member_name = #name;                                                                      \
+                                                                                                                                    \
+        static constexpr value_type const& get(name const& p) { return p.member; }                                                  \
+                                                                                                                                    \
+        static constexpr std::enable_if_t<!std::is_const_v<value_type>, value_type&> get(name& p) { return p.member; }              \
+                                                                                                                                    \
+        static constexpr std::enable_if_t<!std::is_const_v<value_type>, value_type&&> get(name&& p) { return std::move(p.member); } \
+    };                                                                                                                              \
     }
 
 namespace Stf::Refl {
 
 template<typename T>
-concept InternallyReflectable
-    = requires(T const& self, T& mut_self, T&& rvref_self) {
-          // typename std::enable_if_t<std::is_same_v<typename T::serialization_tag, MemberSerializationTag>, void>;
-          typename std::enable_if_t<std::is_same_v<T, typename T::MemReflBaseHelper::parent_type>, void>;
-          { T::MemReflBaseHelper::member_count } -> std::convertible_to<size_t>;
-      };
+concept InternallyReflectable = requires(T const& self, T& mut_self, T&& rvref_self) {
+                                    // typename std::enable_if_t<std::is_same_v<typename T::serialization_tag, MemberSerializationTag>, void>;
+                                    typename std::enable_if_t<std::is_same_v<T, typename T::MemReflBaseHelper::parent_type>, void>;
+                                    { T::MemReflBaseHelper::member_count } -> std::convertible_to<size_t>;
+                                };
 
 template<typename T>
 concept ExternallyReflectable = requires(T const& self, T& mut_self, T&& rvref_self) {
@@ -152,49 +145,31 @@ template<size_t I, typename T> struct member_name { static constexpr const char*
 
 /// Internally reflectable types ///
 
-template<InternallyReflectable T>
-struct member_count<T> : std::integral_constant<size_t, T::MemReflBaseHelper::member_count> { };
+template<InternallyReflectable T> struct member_count<T> : std::integral_constant<size_t, T::MemReflBaseHelper::member_count> { };
 
-template<size_t I, InternallyReflectable T> struct member_name<I, T> {
-    static constexpr auto value = T::template MemReflHelper<I>::member_name;
-};
+template<size_t I, InternallyReflectable T> struct member_name<I, T> { static constexpr auto value = T::template MemReflHelper<I>::member_name; };
 
-template<size_t I, InternallyReflectable T> struct member_type<I, T> {
-    using type = typename T::template MemReflHelper<I>::value_type;
-};
+template<size_t I, InternallyReflectable T> struct member_type<I, T> { using type = typename T::template MemReflHelper<I>::value_type; };
 
-template<size_t I, InternallyReflectable T> constexpr auto const& get(T const& t) {
-    return T::template MemReflHelper<I>::get(t);
-}
+template<size_t I, InternallyReflectable T> constexpr auto const& get(T const& t) { return T::template MemReflHelper<I>::get(t); }
 
 template<size_t I, InternallyReflectable T> constexpr auto& get(T& t) { return T::template MemReflHelper<I>::get(t); }
 
-template<size_t I, InternallyReflectable T> constexpr auto&& get(T&& t) {
-    return std::move(T::template MemReflHelper<I>::get(t));
-}
+template<size_t I, InternallyReflectable T> constexpr auto&& get(T&& t) { return std::move(T::template MemReflHelper<I>::get(t)); }
 
 /// Externally reflectable types ///
 
-template<ExternallyReflectable T>
-struct member_count<T> : std::integral_constant<size_t, ExtReflBaseHelper<T>::member_count> { };
+template<ExternallyReflectable T> struct member_count<T> : std::integral_constant<size_t, ExtReflBaseHelper<T>::member_count> { };
 
-template<size_t I, ExternallyReflectable T> struct member_name<I, T> {
-    static constexpr auto value = ExtReflHelper<I, T>::member_name;
-};
+template<size_t I, ExternallyReflectable T> struct member_name<I, T> { static constexpr auto value = ExtReflHelper<I, T>::member_name; };
 
-template<size_t I, ExternallyReflectable T> struct member_type<I, T> {
-    using type = typename ExtReflHelper<I, T>::value_type;
-};
+template<size_t I, ExternallyReflectable T> struct member_type<I, T> { using type = typename ExtReflHelper<I, T>::value_type; };
 
-template<size_t I, ExternallyReflectable T> constexpr auto const& get(T const& t) {
-    return ExtReflHelper<I, T>::get(t);
-}
+template<size_t I, ExternallyReflectable T> constexpr auto const& get(T const& t) { return ExtReflHelper<I, T>::get(t); }
 
 template<size_t I, ExternallyReflectable T> constexpr auto& get(T& t) { return ExtReflHelper<I, T>::get(t); }
 
-template<size_t I, ExternallyReflectable T> constexpr auto&& get(T&& t) {
-    return std::move(ExtReflHelper<I, T>::get(t));
-}
+template<size_t I, ExternallyReflectable T> constexpr auto&& get(T&& t) { return std::move(ExtReflHelper<I, T>::get(t)); }
 
 /// Coincidentally reflectable types ///
 
@@ -231,8 +206,7 @@ template<size_t I, Reflectable T> constexpr std::string_view get_member_name(T c
 
 namespace std {
 
-template<::Stf::Refl::Reflectable T>
-struct tuple_size<T> : integral_constant<size_t, ::Stf::Refl::member_count<T>::value> { };
+template<::Stf::Refl::Reflectable T> struct tuple_size<T> : integral_constant<size_t, ::Stf::Refl::member_count<T>::value> { };
 
 template<size_t I, ::Stf::Refl::Reflectable T> struct tuple_element<I, T> : public ::Stf::Refl::member_type<I, T> { };
 
@@ -240,8 +214,6 @@ template<size_t I, ::Stf::Refl::Reflectable T> constexpr auto const& get(T const
 
 template<size_t I, ::Stf::Refl::InternallyReflectable T> constexpr auto& get(T& t) { return ::Stf::Refl::get<I>(t); }
 
-template<size_t I, ::Stf::Refl::InternallyReflectable T> constexpr auto&& get(T&& t) {
-    return ::Stf::Refl::get<I>(std::forward<T>(t));
-}
+template<size_t I, ::Stf::Refl::InternallyReflectable T> constexpr auto&& get(T&& t) { return ::Stf::Refl::get<I>(std::forward<T>(t)); }
 
 }

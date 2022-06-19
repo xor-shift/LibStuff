@@ -23,12 +23,9 @@ namespace Bar {
 struct Foo {
     MEMREFL_BEGIN(Foo, 2);
 
-    std::array<::Foo::Foo, 16> a = {};
-    std::optional<::Foo::Foo> b = {};
+    std::array<::Foo::Foo, 16> MEMREFL_DECL_MEMBER(a);
+    std::optional<::Foo::Foo> MEMREFL_DECL_MEMBER(b);
     uint32_t invisible = 0xDEADBEEFu;
-
-    MEMREFL_MEMBER(a);
-    MEMREFL_MEMBER(b);
 };
 
 }
@@ -36,11 +33,8 @@ struct Foo {
 struct InternallyReflectableStruct {
     MEMREFL_BEGIN(InternallyReflectableStruct, 2);
 
-    int a;
-    float b;
-
-    MEMREFL_MEMBER(a);
-    MEMREFL_MEMBER(b);
+    int MEMREFL_DECL_MEMBER(a);
+    float MEMREFL_DECL_MEMBER(b);
 };
 
 namespace SomeNamespace {
@@ -104,7 +98,7 @@ TEST(Serde, Serde) {
     ASSERT_EQ(a_deser.b, a.b);
 
 
-    /*std::array<uint8_t, Stf::serialized_size_v<decltype(b)>> b_ser;
+    std::array<uint8_t, Stf::serialized_size_v<decltype(b)>> b_ser;
     Stf::serialize(b_ser.begin(), b);
 
     ASSERT_EQ(a_ser.size(), b_ser.size());
@@ -113,7 +107,7 @@ TEST(Serde, Serde) {
     for (size_t i = 0; i < a_ser.size(); i++)
         all_bytes_are_equal &= a_ser[i] == b_ser[i];
 
-    ASSERT_TRUE(all_bytes_are_equal);*/
+    ASSERT_TRUE(all_bytes_are_equal);
 }
 
 struct ComprehensiveBase {

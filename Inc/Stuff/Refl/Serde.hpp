@@ -118,7 +118,7 @@ private:
     template<size_t i = 0> static constexpr It serialize_impl(It it, T const& v) {
         using U = std::tuple_element_t<i, T>;
 
-        it = Serializer<U, It>::serialize(it, Stf::get<i>(v));
+        it = Serializer<U, It>::serialize(it, std::get<i>(v));
 
         if constexpr (i + 1 < std::tuple_size_v<T>)
             return serialize_impl<i + 1>(it, v);
@@ -129,7 +129,7 @@ private:
     template<size_t i = 0> static constexpr It deserialize_impl(T& v, It it) {
         using U = std::tuple_element_t<i, T>;
 
-        it = Serializer<U, It>::deserialize(Stf::get<i>(v), it);
+        it = Serializer<U, It>::deserialize(std::get<i>(v), it);
 
         if constexpr (i + 1 < std::tuple_size_v<T>)
             return deserialize_impl<i + 1>(v, it);

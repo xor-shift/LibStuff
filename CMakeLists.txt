@@ -4,6 +4,8 @@ project(libstuff)
 set(CMAKE_CXX_STANDARD 23)
 
 option(LibStuffUseFMT "" ON)
+option(LibStuffCompileTests "" ON)
+option(LibStuffCompileBenchmarks "" ON)
 
 set(${CMAKE_CXX_FLAGS} "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined")
 set(${CMAKE_EXE_LINKER_FLAGS} "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address -fsanitize=undefined")
@@ -41,6 +43,7 @@ add_library(${PROJECT_NAME}
         Inc/Stuff/Util/Conv.hpp
         Inc/Stuff/Util/DummyIterator.hpp
         Inc/Stuff/Util/Error.hpp
+        Inc/Stuff/Util/Scope.hpp
         )
 
 target_include_directories(${PROJECT_NAME} PUBLIC Inc)
@@ -58,48 +61,54 @@ endif ()
 
 ### TESTS ###
 
-add_subdirectory(Thirdparty/googletest)
+if (LibStuffCompileTests)
 
-add_executable(${PROJECT_NAME}_tests
-        Tests/Graphics/Image.cpp
+    add_subdirectory(Thirdparty/googletest)
 
-        Tests/IO/Delim.cpp
-        Tests/IO/GPS.cpp
-        Tests/IO/Packetman.cpp
+    add_executable(${PROJECT_NAME}_tests
+            Tests/Graphics/Image.cpp
 
-        Tests/Maths/Bit.cpp
-        Tests/Maths/CRC.cpp
-        Tests/Maths/Scalar.cpp
-        Tests/Maths/Vector.cpp
+            Tests/IO/Delim.cpp
+            Tests/IO/GPS.cpp
+            Tests/IO/Packetman.cpp
 
-        Tests/Refl/Serde.cpp
+            Tests/Maths/Bit.cpp
+            Tests/Maths/CRC.cpp
+            Tests/Maths/Scalar.cpp
+            Tests/Maths/Vector.cpp
 
-        Tests/Util/Conv.cpp
-        )
+            Tests/Refl/Serde.cpp
 
-target_link_libraries(${PROJECT_NAME}_tests
-        gtest gtest_main
-        ${PROJECT_NAME}
-        )
+            Tests/Util/Conv.cpp
+            Tests/Util/Scope.cpp
+            )
 
-target_compile_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fsanitize=undefined)
-target_link_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fsanitize=undefined)
+    target_link_libraries(${PROJECT_NAME}_tests
+            gtest gtest_main
+            ${PROJECT_NAME}
+            )
+
+endif ()
 
 ### BENCHMARKS ###
 
-add_subdirectory(Thirdparty/benchmark)
+if (LibStuffCompileBenchmarks)
 
-add_executable(${PROJECT_NAME}_benchmark_qoi
-        Benchmarks/Gfx/Image/QoI.cpp
-        )
+    add_subdirectory(Thirdparty/benchmark)
 
-target_link_libraries(${PROJECT_NAME}_benchmark_qoi
-        benchmark
-        ${PROJECT_NAME})
+    add_executable(${PROJECT_NAME}_benchmark_qoi
+            Benchmarks/Gfx/Image/QoI.cpp
+            )
 
-### EXAMPLES ###
+    target_link_libraries(${PROJECT_NAME}_benchmark_qoi
+            benchmark
+            ${PROJECT_NAME})
 
-add_executable(${PROJECT_NAME}_examples_GPS
-        Examples/GPS.cpp)
-target_link_libraries(${PROJECT_NAME}_examples_GPS
-        ${PROJECT_NAME})
+    ### EXAMPLES ###
+
+    add_executable(${PROJECT_NAME}_examples_GPS
+            Examples/GPS.cpp)
+    target_link_libraries(${PROJECT_NAME}_examples_GPS
+            ${PROJECT_NAME})
+
+endif ()

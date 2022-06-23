@@ -11,12 +11,12 @@
 namespace Stf {
 
 struct PacketHeader {
-    NEW_MEMREFL_BEGIN(PacketHeader, 4)
+    MEMREFL_BEGIN(PacketHeader, 4)
 
-    uint32_t NEW_MEMREFL_DECL_MEMBER(crc);
-    uint16_t NEW_MEMREFL_DECL_MEMBER(len);
-    uint16_t NEW_MEMREFL_DECL_MEMBER(id);
-    uint32_t NEW_MEMREFL_DECL_MEMBER(order);
+    uint32_t MEMREFL_DECL_MEMBER(crc);
+    uint16_t MEMREFL_DECL_MEMBER(len);
+    uint16_t MEMREFL_DECL_MEMBER(id);
+    uint32_t MEMREFL_DECL_MEMBER(order);
 };
 
 struct PacketManStatistics {
@@ -45,11 +45,11 @@ struct PacketManagerBase {
     struct PingPacket {
         static constexpr uint16_t packet_id = 0xFFFF;
 
-        NEW_MEMREFL_BEGIN(PingPacket, 1);
+        MEMREFL_BEGIN(PingPacket, 1);
 
         uint32_t token;
 
-        NEW_MEMREFL_MEMBER(token);
+        MEMREFL_MEMBER(token);
     };
 
     size_t initial_drop_size = 3;

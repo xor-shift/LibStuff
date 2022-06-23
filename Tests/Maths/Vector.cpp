@@ -13,7 +13,7 @@ TEST(Vector, BasicExpressions) {
     ASSERT_TRUE((std::is_same_v<std::tuple_element_t<0, decltype(vec_0)>, const float>));
     ASSERT_TRUE((std::is_same_v<std::tuple_element_t<1, decltype(vec_0)>, const float>));
     ASSERT_TRUE((std::is_same_v<std::tuple_element_t<2, decltype(vec_0)>, const float>));
-    ASSERT_EQ(Stf::ReflNew::get<0>(vec_0), 1.f);
+    ASSERT_EQ(Stf::Refl::get<0>(vec_0), 1.f);
     ASSERT_EQ(get<1>(vec_0), 2.f);
     ASSERT_EQ(get<2>(vec_0), 3.f);
 

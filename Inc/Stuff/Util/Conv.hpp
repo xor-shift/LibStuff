@@ -158,7 +158,7 @@ namespace Conv::Detail {
 constexpr char digit_from_char(char c) {
     constexpr std::array<char, 256> lookup = ([] {
         std::array<char, 256> ret = {};
-        std::ranges::fill(ret, 127);
+        std::fill(ret.begin(), ret.end(), 127);
 
         for (char i = 0; i < 10; i++)
             ret[i + '0'] = i;

@@ -11,31 +11,29 @@ namespace Stf {
 
 // clang-format off
 
+namespace Refl {
+
+template<size_t I, typename T> std::tuple_element_t<I, T> const & get(T const& v);
+template<size_t I, typename T> std::tuple_element_t<I, T>& get(T& v);
+template<size_t I, typename T> std::tuple_element_t<I, T> const && get(T const&& v);
+template<size_t I, typename T> std::tuple_element_t<I, T>&& get(T&& v);
+
+}
+
 namespace Detail {
 
-template<size_t I, typename T>
-constexpr auto getter(T const& v) -> decltype(v.template get<I>()) { return v.template get<I>(); }
-
-template<size_t I, typename T>
-constexpr auto getter(T& v) -> decltype(v.template get<I>()) { return v.template get<I>(); }
-
-template<size_t I, typename T>
-constexpr auto getter(T const&& v) -> decltype(v.template get<I>()) { return std::move(v.template get<I>()); }
-
-template<size_t I, typename T>
-constexpr auto getter(T&& v) -> decltype(v.template get<I>()) { return std::move(v.template get<I>()); }
-
-template<size_t I, typename T>
-constexpr auto getter(T const& v) -> decltype(get<I>(v)) { return get<I>(v); }
-
-template<size_t I, typename T>
-constexpr auto getter(T& v) -> decltype(get<I>(v)) { return get<I>(v); }
-
-template<size_t I, typename T>
-constexpr auto getter(T const&& v) -> decltype(get<I>(v)) { return std::move(get<I>(std::forward(v))); }
-
-template<size_t I, typename T>
-constexpr auto getter(T&& v) -> decltype(get<I>(v)) { return std::move(get<I>(std::forward(v))); }
+template<size_t I, typename T> constexpr auto getter(T const& v) -> decltype(v.template get<I>()) { return v.template get<I>(); }
+template<size_t I, typename T> constexpr auto getter(T& v) -> decltype(v.template get<I>()) { return v.template get<I>(); }
+template<size_t I, typename T> constexpr auto getter(T const&& v) -> decltype(v.template get<I>()) { return std::move(v.template get<I>()); }
+template<size_t I, typename T> constexpr auto getter(T&& v) -> decltype(v.template get<I>()) { return std::move(v.template get<I>()); }
+template<size_t I, typename T> constexpr auto getter(T const& v) -> decltype(get<I>(v)) { return get<I>(v); }
+template<size_t I, typename T> constexpr auto getter(T& v) -> decltype(get<I>(v)) { return get<I>(v); }
+template<size_t I, typename T> constexpr auto getter(T const&& v) -> decltype(get<I>(v)) { return std::move(get<I>(std::forward(v))); }
+template<size_t I, typename T> constexpr auto getter(T&& v) -> decltype(get<I>(v)) { return std::move(get<I>(std::forward(v))); }
+/*template<size_t I, typename T> constexpr auto getter(T const& v) -> decltype(Stf::Refl::get<I>(v)) { return get<I>(v); }
+template<size_t I, typename T> constexpr auto getter(T& v) -> decltype(Stf::Refl::get<I>(v)) { return get<I>(v); }
+template<size_t I, typename T> constexpr auto getter(T const&& v) -> decltype(Stf::Refl::get<I>(v)) { return std::move(get<I>(std::forward(v))); }
+template<size_t I, typename T> constexpr auto getter(T&& v) -> decltype(Stf::Refl::get<I>(v)) { return std::move(get<I>(std::forward(v))); }*/
 
 }
 
@@ -49,7 +47,6 @@ constexpr auto getter(T&& v) -> decltype(get<I>(v)) { return std::move(get<I>(st
 /// \tparam T
 /// \param arg
 /// \return
-template<size_t I, typename T>
-constexpr auto get(T&& arg) -> decltype(auto) { return Detail::getter<I>(arg); }
+template<size_t I, typename T> constexpr auto get(T&& arg) -> decltype(auto) { return Detail::getter<I>(arg); }
 
 }

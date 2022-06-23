@@ -12,36 +12,36 @@
 #include <tuple>
 
 #include <Stuff/Maths/Scalar.hpp>
-#include <Stuff/Refl/Refl.hpp>
+#include <Stuff/Refl/ReflNew.hpp>
 #include <Stuff/Util/Conv.hpp>
 #include <Stuff/Util/Error.hpp>
 
 namespace Stf::GPS {
 
 struct Time {
-    MEMREFL_BEGIN(Time, 4);
+    NEW_MEMREFL_BEGIN(Time, 4);
 
-    int MEMREFL_DECL_MEMBER(hh);
-    int MEMREFL_DECL_MEMBER(mm);
-    int MEMREFL_DECL_MEMBER(ss);
-    int MEMREFL_DECL_MEMBER(sss);
+    int NEW_MEMREFL_DECL_MEMBER(hh);
+    int NEW_MEMREFL_DECL_MEMBER(mm);
+    int NEW_MEMREFL_DECL_MEMBER(ss);
+    int NEW_MEMREFL_DECL_MEMBER(sss);
 };
 
 struct Date {
-    MEMREFL_BEGIN(Date, 3);
+    NEW_MEMREFL_BEGIN(Date, 3);
 
-    int MEMREFL_DECL_MEMBER(dd);
-    int MEMREFL_DECL_MEMBER(mm);
-    int MEMREFL_DECL_MEMBER(yy);
+    int NEW_MEMREFL_DECL_MEMBER(dd);
+    int NEW_MEMREFL_DECL_MEMBER(mm);
+    int NEW_MEMREFL_DECL_MEMBER(yy);
 };
 
 struct Angle {
-    MEMREFL_BEGIN(Angle, 4);
+    NEW_MEMREFL_BEGIN(Angle, 4);
 
-    int MEMREFL_DECL_MEMBER(degrees);
-    int MEMREFL_DECL_MEMBER(minutes);
-    int MEMREFL_DECL_MEMBER(minutes_decimal_digits);
-    int MEMREFL_DECL_MEMBER(minutes_decimal);
+    int NEW_MEMREFL_DECL_MEMBER(degrees);
+    int NEW_MEMREFL_DECL_MEMBER(minutes);
+    int NEW_MEMREFL_DECL_MEMBER(minutes_decimal_digits);
+    int NEW_MEMREFL_DECL_MEMBER(minutes_decimal);
 
     constexpr float as_degrees() const {
         float decimal_mult;
@@ -70,19 +70,19 @@ enum class Direction : int {
 };
 
 struct GPSState {
-    MEMREFL_BEGIN(GPSState, 5)
+    NEW_MEMREFL_BEGIN(GPSState, 5)
 
-    std::optional<Time> MEMREFL_DECL_MEMBER(time);
+    std::optional<Time> NEW_MEMREFL_DECL_MEMBER(time);
 
-    std::optional<Date> MEMREFL_DECL_MEMBER(date);
+    std::optional<Date> NEW_MEMREFL_DECL_MEMBER(date);
 
     // latitude, longitude
-    std::optional<std::pair<Angle, Angle>> MEMREFL_DECL_MEMBER(location);
+    std::optional<std::pair<Angle, Angle>> NEW_MEMREFL_DECL_MEMBER(location);
 
     // ns, ew
-    std::optional<std::pair<Direction, Direction>> MEMREFL_DECL_MEMBER(direction);
+    std::optional<std::pair<Direction, Direction>> NEW_MEMREFL_DECL_MEMBER(direction);
 
-    size_t MEMREFL_DECL_MEMBER(connected_satellites);
+    size_t NEW_MEMREFL_DECL_MEMBER(connected_satellites);
 
     void feed_line(std::string_view line);
 

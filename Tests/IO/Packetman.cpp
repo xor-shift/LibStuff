@@ -3,13 +3,13 @@
 #include <Stuff/IO/Packetman.hpp>
 
 struct Asd {
-    MEMREFL_BEGIN(Asd, 2);
+    NEW_MEMREFL_BEGIN(Asd, 2);
 
     int a = 5;
     float b = 3.1415926;
 
-    MEMREFL_MEMBER(a);
-    MEMREFL_MEMBER(b);
+    NEW_MEMREFL_MEMBER(a);
+    NEW_MEMREFL_MEMBER(b);
 };
 
 TEST(PacketMan, PacketMan) {

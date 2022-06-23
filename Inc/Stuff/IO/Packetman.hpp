@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include <Stuff/Refl/Refl.hpp>
+#include <Stuff/Refl/ReflNew.hpp>
 #include <Stuff/Refl/Serde.hpp>
 #include <Stuff/Maths/CRC.hpp>
 
@@ -11,12 +11,12 @@
 namespace Stf {
 
 struct PacketHeader {
-    MEMREFL_BEGIN(PacketHeader, 4)
+    NEW_MEMREFL_BEGIN(PacketHeader, 4)
 
-    uint32_t MEMREFL_DECL_MEMBER(crc);
-    uint16_t MEMREFL_DECL_MEMBER(len);
-    uint16_t MEMREFL_DECL_MEMBER(id);
-    uint32_t MEMREFL_DECL_MEMBER(order);
+    uint32_t NEW_MEMREFL_DECL_MEMBER(crc);
+    uint16_t NEW_MEMREFL_DECL_MEMBER(len);
+    uint16_t NEW_MEMREFL_DECL_MEMBER(id);
+    uint32_t NEW_MEMREFL_DECL_MEMBER(order);
 };
 
 struct PacketManStatistics {
@@ -45,11 +45,11 @@ struct PacketManagerBase {
     struct PingPacket {
         static constexpr uint16_t packet_id = 0xFFFF;
 
-        MEMREFL_BEGIN(PingPacket, 1);
+        NEW_MEMREFL_BEGIN(PingPacket, 1);
 
         uint32_t token;
 
-        MEMREFL_MEMBER(token);
+        NEW_MEMREFL_MEMBER(token);
     };
 
     size_t initial_drop_size = 3;
@@ -70,7 +70,7 @@ struct PacketManagerBase {
 
     virtual void rx_packet(std::span<const uint8_t> p, PacketHeader header) { }
 
-    template<Stf::Refl::Reflectable T> uint32_t tx_packet(T const& v, size_t count = 1) {
+    template<typename T> uint32_t tx_packet(T const& v, size_t count = 1) {
         if (!serialize_data(v))
             return 0;
 
@@ -115,7 +115,7 @@ private:
     /// The data will be right-aligned\n
     /// @return
     /// If false, the serialized data isn't going to fit the transmission buffer
-    template<Stf::Refl::Reflectable T> bool serialize_data(T const& v) {
+    template<typename T> bool serialize_data(T const& v) {
         static constexpr size_t total_needed_size = serialized_size_v<PacketHeader> + serialized_size_v<T>;
         if constexpr (total_needed_size > TxBufSize)
             return false;
@@ -145,7 +145,7 @@ private:
     /// @tparam T This parameter is used to determine the serialized size of the existing data
     /// @return
     /// 0 if encoding failed, the size of the encoded, left aligned, data if successful
-    template<Stf::Refl::Reflectable T> size_t encode_data() {
+    template<typename T> size_t encode_data() {
         static constexpr size_t total_size = serialized_size_v<T> + serialized_size_v<PacketHeader>;
 
         size_t read_head = TxBufSize - total_size;

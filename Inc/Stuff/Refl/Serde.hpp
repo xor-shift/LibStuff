@@ -13,7 +13,7 @@
 #include <Stuff/Util/DummyIterator.hpp>
 #include <Stuff/Util/Util.hpp>
 
-#include "./Refl.hpp"
+#include "./ReflNew.hpp"
 
 namespace Stf {
 
@@ -109,29 +109,29 @@ template<typename T, typename It> struct Serializer<std::optional<T>, It> {
     }
 };
 
-template<typename T, typename It> struct Serializer<T, It, std::enable_if_t<Refl::is_refl<T>::value>> {
+template<typename T, typename It> struct Serializer<T, It, std::void_t<decltype(ReflNew::get<0, T>)>> {
     static constexpr It serialize(It it, T const& v) { return serialize_impl<0>(it, v); }
 
     static constexpr It deserialize(T& v, It it) { return deserialize_impl<0>(v, it); }
 
 private:
     template<size_t i = 0> static constexpr It serialize_impl(It it, T const& v) {
-        using U = std::tuple_element_t<i, T>;
+        using U = Stf::ReflNew::tuple_element_t<i, T>;
 
-        it = Serializer<U, It>::serialize(it, Stf::get<i>(v));
+        it = Serializer<U, It>::serialize(it, Stf::ReflNew::get<i>(v));
 
-        if constexpr (i + 1 < std::tuple_size_v<T>)
+        if constexpr (i + 1 < Stf::ReflNew::tuple_size_v<T>)
             return serialize_impl<i + 1>(it, v);
         else
             return it;
     }
 
     template<size_t i = 0> static constexpr It deserialize_impl(T& v, It it) {
-        using U = std::tuple_element_t<i, T>;
+        using U = Stf::ReflNew::tuple_element_t<i, T>;
 
-        it = Serializer<U, It>::deserialize(Stf::get<i>(v), it);
+        it = Serializer<U, It>::deserialize(Stf::ReflNew::get<i>(v), it);
 
-        if constexpr (i + 1 < std::tuple_size_v<T>)
+        if constexpr (i + 1 < Stf::ReflNew::tuple_size_v<T>)
             return deserialize_impl<i + 1>(v, it);
         else
             return it;

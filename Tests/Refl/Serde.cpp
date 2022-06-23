@@ -1,19 +1,20 @@
 #include <gtest/gtest.h>
 
-#include <Stuff/Refl/Refl.hpp>
+#include <Stuff/Refl/ReflNew.hpp>
 #include <Stuff/Refl/Serde.hpp>
+#include <Stuff/Maths/Maths.hpp>
 
 namespace Foo {
 
 struct Foo {
-    MEMREFL_BEGIN(Foo, 2);
+    NEW_MEMREFL_BEGIN(Foo, 2);
 
     double a = 3.14159;
     char b[24] = {};
     uint32_t invisible = 0xCAFEBABEu;
 
-    MEMREFL_MEMBER(a);
-    MEMREFL_MEMBER(b);
+    NEW_MEMREFL_MEMBER(a);
+    NEW_MEMREFL_MEMBER(b);
 };
 
 }
@@ -21,20 +22,20 @@ struct Foo {
 namespace Bar {
 
 struct Foo {
-    MEMREFL_BEGIN(Foo, 2);
+    NEW_MEMREFL_BEGIN(Foo, 2);
 
-    std::array<::Foo::Foo, 16> MEMREFL_DECL_MEMBER(a);
-    std::optional<::Foo::Foo> MEMREFL_DECL_MEMBER(b);
+    std::array<::Foo::Foo, 16> NEW_MEMREFL_DECL_MEMBER(a);
+    std::optional<::Foo::Foo> NEW_MEMREFL_DECL_MEMBER(b);
     uint32_t invisible = 0xDEADBEEFu;
 };
 
 }
 
 struct InternallyReflectableStruct {
-    MEMREFL_BEGIN(InternallyReflectableStruct, 2);
+    NEW_MEMREFL_BEGIN(InternallyReflectableStruct, 2);
 
-    int MEMREFL_DECL_MEMBER(a);
-    float MEMREFL_DECL_MEMBER(b);
+    int NEW_MEMREFL_DECL_MEMBER(a);
+    float NEW_MEMREFL_DECL_MEMBER(b);
 };
 
 namespace SomeNamespace {
@@ -44,17 +45,14 @@ struct ExternallyReflectableStruct {
     float b;
 };
 
+NEW_EXTREFL_BEGIN(SomeNamespace::ExternallyReflectableStruct);
+NEW_EXTREFL_MEMBER(SomeNamespace::ExternallyReflectableStruct, a);
+NEW_EXTREFL_MEMBER(SomeNamespace::ExternallyReflectableStruct, b);
+
 }
 
-EXTREFL_BEGIN(SomeNamespace::ExternallyReflectableStruct, 2);
-EXTREFL_MEMBER(SomeNamespace::ExternallyReflectableStruct, a);
-EXTREFL_MEMBER(SomeNamespace::ExternallyReflectableStruct, b);
-
-static_assert(Stf::Refl::Reflectable<InternallyReflectableStruct>);
-static_assert(Stf::Refl::Reflectable<SomeNamespace::ExternallyReflectableStruct>);
-
 TEST(Serde, Serde) {
-    /*ASSERT_EQ(Stf::serialized_size_v<int>, sizeof(int));
+    ASSERT_EQ(Stf::serialized_size_v<int>, sizeof(int));
     ASSERT_EQ(Stf::serialized_size_v<double>, sizeof(double));
     ASSERT_EQ((Stf::serialized_size_v<std::array<int, 4>>), sizeof(int) * 4);
     ASSERT_EQ(Stf::serialized_size_v<std::optional<int>>, sizeof(int) + sizeof(bool));
@@ -62,20 +60,20 @@ TEST(Serde, Serde) {
     ASSERT_EQ(Stf::serialized_size_v<Bar::Foo>, Stf::serialized_size_v<Foo::Foo> * 17 + 1);
     ASSERT_EQ(Stf::serialized_size_v<InternallyReflectableStruct>, sizeof(int) + sizeof(float));
 
-    ASSERT_EQ(Stf::Refl::member_count_v<SomeNamespace::ExternallyReflectableStruct>, 2);
-    ASSERT_TRUE((std::is_same_v<Stf::Refl::member_type_t<0, SomeNamespace::ExternallyReflectableStruct>, int>));
-    ASSERT_TRUE((std::is_same_v<Stf::Refl::member_type_t<1, SomeNamespace::ExternallyReflectableStruct>, float>));
+    ASSERT_EQ(Stf::ReflNew::tuple_size_v<SomeNamespace::ExternallyReflectableStruct>, 2);
+    ASSERT_TRUE((std::is_same_v<Stf::ReflNew::tuple_element_t<0, SomeNamespace::ExternallyReflectableStruct>, int>));
+    ASSERT_TRUE((std::is_same_v<Stf::ReflNew::tuple_element_t<1, SomeNamespace::ExternallyReflectableStruct>, float>));
 
-    ASSERT_EQ(std::tuple_size_v<SomeNamespace::ExternallyReflectableStruct>, 2);
-    ASSERT_TRUE((std::is_same_v<std::tuple_element_t<0, SomeNamespace::ExternallyReflectableStruct>, int>));
-    ASSERT_TRUE((std::is_same_v<std::tuple_element_t<1, SomeNamespace::ExternallyReflectableStruct>, float>));
+    //ASSERT_EQ(std::tuple_size_v<SomeNamespace::ExternallyReflectableStruct>, 2);
+    //ASSERT_TRUE((std::is_same_v<std::tuple_element_t<0, SomeNamespace::ExternallyReflectableStruct>, int>));
+    //ASSERT_TRUE((std::is_same_v<std::tuple_element_t<1, SomeNamespace::ExternallyReflectableStruct>, float>));
 
     InternallyReflectableStruct asd {};
     InternallyReflectableStruct::MemReflHelper<0>::get(asd) = 1;
-    std::get<0>(asd) = 2;
+    Stf::ReflNew::get<0>(asd) = 2;
 
     ASSERT_EQ(asd.a, 2);
-    ASSERT_EQ(asd.a, std::get<0>(asd));
+    ASSERT_EQ(asd.a, Stf::ReflNew::get<0>(asd));
 
     InternallyReflectableStruct a {
         .a = 5,
@@ -107,11 +105,11 @@ TEST(Serde, Serde) {
     for (size_t i = 0; i < a_ser.size(); i++)
         all_bytes_are_equal &= a_ser[i] == b_ser[i];
 
-    ASSERT_TRUE(all_bytes_are_equal);*/
+    ASSERT_TRUE(all_bytes_are_equal);
 }
 
 struct ComprehensiveBase {
-    MEMREFL_BEGIN(ComprehensiveBase, 9)
+    NEW_MEMREFL_BEGIN(ComprehensiveBase, 9)
 
     int a = 0;
     float b = 0;
@@ -126,26 +124,32 @@ struct ComprehensiveBase {
     std::pair<float, Inline> h {};
     std::tuple<float, Inline, std::optional<decltype(h)>> i {};
 
-    MEMREFL_MEMBER(a);
-    MEMREFL_MEMBER(b);
-    MEMREFL_MEMBER(c);
-    MEMREFL_MEMBER(d);
-    MEMREFL_MEMBER(e);
-    MEMREFL_MEMBER(f);
-    MEMREFL_MEMBER(g);
-    MEMREFL_MEMBER(h);
-    MEMREFL_MEMBER(i);
+    NEW_MEMREFL_MEMBER(a);
+    NEW_MEMREFL_MEMBER(b);
+    NEW_MEMREFL_MEMBER(c);
+    NEW_MEMREFL_MEMBER(d);
+    NEW_MEMREFL_MEMBER(e);
+    NEW_MEMREFL_MEMBER(f);
+    NEW_MEMREFL_MEMBER(g);
+    NEW_MEMREFL_MEMBER(h);
+    NEW_MEMREFL_MEMBER(i);
 };
 
 struct Comprehensive {
-    MEMREFL_BEGIN(Comprehensive, 1)
+    NEW_MEMREFL_BEGIN(Comprehensive, 1)
 
     std::pair<std::optional<ComprehensiveBase>[2], float> a;
 
-    MEMREFL_MEMBER(a);
+    NEW_MEMREFL_MEMBER(a);
 };
 
 TEST(Serde, Comprehensive) {
+    ASSERT_EQ(Stf::serialized_size_v<int>, sizeof(int));
+    ASSERT_EQ(Stf::serialized_size_v<int[2]>, sizeof(int) * 2);
+    ASSERT_EQ((Stf::serialized_size_v<std::array<int, 2>>), sizeof(int) * 2);
+    ASSERT_EQ((Stf::serialized_size_v<std::pair<int, int>>), sizeof(int) * 2);
+    ASSERT_EQ((Stf::serialized_size_v<std::tuple<int, int>>), sizeof(int) * 2);
+
     ComprehensiveBase base {
         .a = 1,
         .b = 2.3f,

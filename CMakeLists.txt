@@ -37,7 +37,7 @@ add_library(${PROJECT_NAME}
         Inc/Stuff/Maths/Scalar.hpp
         Inc/Stuff/Maths/Std.hpp
 
-        Inc/Stuff/Refl/Refl.hpp
+        Inc/Stuff/Refl/ReflNew.hpp
         Inc/Stuff/Refl/Serde.hpp
 
         Inc/Stuff/Util/Conv.hpp

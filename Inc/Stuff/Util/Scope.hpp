@@ -11,7 +11,15 @@ enum class GuardType {
 };
 
 template<typename Func> struct ScopeGuard {
-    ScopeGuard(GuardType type, Func&& f)
+    ScopeGuard(ScopeGuard const&) = delete;
+
+    ScopeGuard(ScopeGuard&& other)
+        :m_type(other.type)
+        ,m_func(std::move(other.m_func)) {
+        other.m_armed = false;
+    }
+
+    ScopeGuard(GuardType type, Func&& f = {})
         : m_type(type)
         , m_func(std::forward<Func>(f)) { }
 
@@ -26,7 +34,7 @@ template<typename Func> struct ScopeGuard {
         else
             execution_type = GuardType::ScopeExit;
 
-        if (m_type != execution_type)
+        if (execution_type == GuardType::ScopeExit && m_type == GuardType::ScopeFail)
             return;
 
         std::invoke(m_func);

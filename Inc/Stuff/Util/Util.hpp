@@ -4,8 +4,11 @@
 #include <functional>
 
 #include "./Conv.hpp"
+#include "./CoroCompat.hpp"
 #include "./DummyIterator.hpp"
 #include "./Error.hpp"
+#include "./Scope.hpp"
+#include "./SpinLock.hpp"
 
 namespace Stf {
 
@@ -51,5 +54,14 @@ constexpr auto getter(T&& v) -> decltype(get<I>(v)) { return std::move(get<I>(st
 /// \return
 template<size_t I, typename T>
 constexpr auto get(T&& arg) -> decltype(auto) { return Detail::getter<I>(arg); }
+
+template<typename... Funcs>
+struct MultiVisitor : public Funcs...{
+    using Funcs::operator()...;
+};
+
+template<typename... Funcs>
+MultiVisitor(Funcs&&...) -> MultiVisitor<Funcs...>;
+
 
 }

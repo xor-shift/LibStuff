@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 23)
 option(LibStuffUseFMT "" ON)
 option(LibStuffCompileTests "" ON)
 option(LibStuffCompileBenchmarks "" ON)
+option(LibStuffCompileExamples "" ON)
 
 set(${CMAKE_CXX_FLAGS} "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined")
 set(${CMAKE_EXE_LINKER_FLAGS} "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address -fsanitize=undefined")
@@ -40,10 +41,15 @@ add_library(${PROJECT_NAME}
         Inc/Stuff/Refl/ReflNew.hpp
         Inc/Stuff/Refl/Serde.hpp
 
+        Inc/Stuff/Util/Alloc.hpp
         Inc/Stuff/Util/Conv.hpp
+        Inc/Stuff/Util/CoroCompat.hpp
         Inc/Stuff/Util/DummyIterator.hpp
         Inc/Stuff/Util/Error.hpp
         Inc/Stuff/Util/Scope.hpp
+        Inc/Stuff/Util/SpinLock.hpp
+        Inc/Stuff/Util/Timer.hpp
+        Inc/Stuff/Util/Util.hpp
         )
 
 target_include_directories(${PROJECT_NAME} PUBLIC Inc)
@@ -79,6 +85,7 @@ if (LibStuffCompileTests)
 
             Tests/Refl/Serde.cpp
 
+            Tests/Util/Alloc.cpp
             Tests/Util/Conv.cpp
             Tests/Util/Scope.cpp
             )
@@ -96,15 +103,30 @@ if (LibStuffCompileBenchmarks)
 
     add_subdirectory(Thirdparty/benchmark)
 
-    add_executable(${PROJECT_NAME}_benchmark_qoi
+    add_executable(${PROJECT_NAME}_benchmarks
+            Benchmarks/main.cpp
+
+            Benchmarks/Gfx/Util/Alloc.cpp
             Benchmarks/Gfx/Image/QoI.cpp
             )
 
-    target_link_libraries(${PROJECT_NAME}_benchmark_qoi
+    target_link_libraries(${PROJECT_NAME}_benchmarks
             benchmark
             ${PROJECT_NAME})
 
-    ### EXAMPLES ###
+    if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+        target_compile_options(${PROJECT_NAME}_benchmarks PUBLIC
+                -fsanitize=address -fsanitize=undefined)
+
+        target_link_options(${PROJECT_NAME}_benchmarks PUBLIC
+                -fsanitize=address -fsanitize=undefined)
+    endif()
+
+endif ()
+
+### EXAMPLES ###
+
+if (LibStuffCompileExamples)
 
     add_executable(${PROJECT_NAME}_examples_GPS
             Examples/GPS.cpp)

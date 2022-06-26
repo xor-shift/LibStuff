@@ -106,5 +106,3 @@ static void benchmark_encode_patterns(benchmark::State& state) {
     benchmark_encode_generic(state, 1024, 1024, "patterns", pick_pixel);
 }
 BENCHMARK(benchmark_encode_patterns);
-
-BENCHMARK_MAIN();

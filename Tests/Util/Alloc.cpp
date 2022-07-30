@@ -5,8 +5,9 @@
 #include <vector>
 
 TEST(Alloc, Alloc) {
-    std::array<std::byte, 10240> storage {};
-    Stf::BumpAllocator<size_t, decltype(storage)> alloc(storage);
+    std::array<std::byte, 10240> container {};
+    Stf::BumpAllocatorStorage<decltype(container)> storage { container };
+    Stf::BumpAllocator<size_t, decltype(container)> alloc { storage };
 
     auto* a = alloc.allocate(1);
     auto* b = alloc.allocate(1);

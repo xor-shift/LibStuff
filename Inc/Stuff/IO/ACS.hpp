@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <functional>
 #include <numeric>
+#include <utility>
 
 namespace Stf::IO::ACS {
 
@@ -28,7 +29,7 @@ struct ACS {
     std::array<float, 8> averaging_window {};
     size_t window_ptr = 0;
 
-    float get_sensitivity() const {
+    constexpr float get_sensitivity() const {
         switch (type) {
         case Type::CET10:
             return 40.f * 5.f;
@@ -50,6 +51,7 @@ struct ACS {
         case Type::U200:
             return 20.f;
         }
+        std::unreachable();
     }
 
     constexpr float get_averaged_voltage() const {
@@ -58,13 +60,17 @@ struct ACS {
         return sum / averaging_window.size();
     }
 
-    constexpr void bump(uint32_t measurement) {
-        averaging_window[window_ptr] = static_cast<float>(measurement) * (voltage_ceil / voltage_division);
+    constexpr void bump(float measurement) {
+        averaging_window[window_ptr] = measurement;
         ++window_ptr %= averaging_window.size();
         ++bump_counter;
     }
 
-    float measure_amperes(bool use_zero_pt = false) {
+    constexpr void bump(uint32_t measurement) {
+        bump(static_cast<float>(measurement) * (voltage_ceil / voltage_division));
+    }
+
+    constexpr float measure_amperes(bool use_zero_pt = false) const {
         const auto measurement = get_averaged_voltage();
 
         float normalized;
@@ -72,7 +78,7 @@ struct ACS {
         if (use_zero_pt)
             normalized = measurement - zero_point;
         else
-            normalized = measurement - (3.3f / 2.f);
+            normalized = measurement - (voltage_ceil / 2.f);
 
         const auto scaled = normalized * 1000.f / get_sensitivity();
 

@@ -3,13 +3,11 @@
 #include <cstddef>
 #include <functional>
 
-#include <Stuff/Util/Util.hpp>
-
-#define MEMREFL_BEGIN(_name, _count)                                                                                             \
+#define MEMREFL_BEGIN(_name, _count)                                                                                                 \
     struct MemReflBaseHelper {                                                                                                       \
         using parent_type = _name;                                                                                                   \
                                                                                                                                      \
-        static constexpr size_t member_count = 5;                                                                                    \
+        static constexpr size_t member_count = _count;                                                                                    \
         static constexpr size_t ct_base = __COUNTER__;                                                                               \
     };                                                                                                                               \
     template<size_t R_I, typename = void>                                                                                            \
@@ -25,7 +23,7 @@
     template<size_t R_I> constexpr refl_getter_type<R_I> const&& get() const&& { return std::move(MemReflHelper<R_I>::get(*this)); } \
     template<size_t R_I> constexpr refl_getter_type<R_I>&& get()&& { return std::move(MemReflHelper<R_I>::get(*this)); }
 
-#define MEMREFL_MEMBER(name)                                                                                                                          \
+#define MEMREFL_MEMBER(name)                                                                                                                              \
     template<size_t R_I> struct MemReflHelper<R_I, std::enable_if_t<R_I == __COUNTER__ - MemReflBaseHelper::ct_base - 1>> {                               \
         using type = decltype(MemReflBaseHelper::parent_type::name);                                                                                      \
                                                                                                                                                           \
@@ -43,7 +41,7 @@
     name = {};                    \
     MEMREFL_MEMBER(name)
 
-#define EXTREFL_BEGIN(_name)                                                                                                                     \
+#define EXTREFL_BEGIN(_name)                                                                                                                         \
     template<size_t I, typename T> struct ReflGetHelper;                                                                                             \
     template<typename T> struct ReflMainHelper;                                                                                                      \
                                                                                                                                                      \
@@ -58,7 +56,7 @@
         return std::forward<const typename ReflGetHelper<I, _name>::type>(ReflGetHelper<I, _name>::get(v));                                          \
     }
 
-#define EXTREFL_MEMBER(_class_name, _member_name)                                                      \
+#define EXTREFL_MEMBER(_class_name, _member_name)                                                          \
     template<> struct ReflGetHelper<__COUNTER__ - ReflMainHelper<_class_name>::ct_base - 1, _class_name> { \
         using type = decltype(_class_name::_member_name);                                                  \
                                                                                                            \
@@ -108,8 +106,8 @@ template<typename T, size_t I>
 struct TupleSizeHelper<T, I, std::void_t<decltype(get<I + 1, const T>(std::declval<const T>()))>>
     : public std::integral_constant<size_t, TupleSizeHelper<T, I + 1, void>::value> { };
 
-//template<typename T, typename U>
-//struct TupleSizeHelper<std::pair<T, U>> {};
+// template<typename T, typename U>
+// struct TupleSizeHelper<std::pair<T, U>> {};
 
 }
 

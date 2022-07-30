@@ -1,5 +1,12 @@
 #include <Stuff/Files/Format.hpp>
 
+#include <Stuff/Util/Hacks/Concepts.hpp>
+#include <Stuff/Util/Error.hpp>
+
+#include <concepts>
+#include <cstddef>
+#include <expected>
+
 // types etc.
 namespace Stf::Gfx::Detail::Image::QoI {
 
@@ -73,7 +80,7 @@ struct RawHeader {
     uint8_t channels;
     uint8_t colorspace;
 
-    template<std::input_iterator IIter> static constexpr Error<RawHeader, std::string_view> from_bytes(IIter&& begin, IIter end) {
+    template<std::input_iterator IIter> static constexpr std::expected<RawHeader, std::string_view> from_bytes(IIter&& begin, IIter end) {
         using namespace FFormat;
 
         constexpr auto header_format = FFormat::group_field()
@@ -85,12 +92,13 @@ struct RawHeader {
 
         header_format_type::representation_type header_tuple;
         auto res = header_format.template decode(begin, end, header_tuple);
+
         if (!res)
-            return "Failed to read header";
+            return std::unexpected { "Failed to read header" };
 
         begin = *res;
 
-        return RawHeader{
+        return RawHeader {
             .magic = std::get<0>(header_tuple),
             .width = std::get<1>(header_tuple),
             .height = std::get<2>(header_tuple),
@@ -120,7 +128,7 @@ struct Header {
     Channels channels;
     ColorSpace colorspace;
 
-    template<std::input_iterator IIter> static constexpr Error<Header, std::string_view> from_bytes(IIter&& begin, IIter end) {
+    template<std::input_iterator IIter> static constexpr std::expected<Header, std::string_view> from_bytes(IIter&& begin, IIter end) {
         RawHeader raw_header;
         unwrap_or_return(raw_header, RawHeader::from_bytes(std::forward<IIter>(begin), end), res.error());
 
@@ -130,25 +138,25 @@ struct Header {
         return header;
     }
 
-    static constexpr Error<Header, std::string_view> from_raw(RawHeader const& raw_header) {
+    static constexpr std::expected<Header, std::string_view> from_raw(RawHeader const& raw_header) {
         constexpr std::array<char, 4> expected_magic { 'q', 'o', 'i', 'f' };
         std::array<char, 4> given_magic {};
         std::copy_n(raw_header.magic.begin(), 4, given_magic.begin());
 
         if (expected_magic != given_magic) {
-            return "Bad header magic";
+            return std::unexpected { "Bad header magic" };
         }
 
         if (raw_header.width == 0 || raw_header.height == 0) {
-            return "Bad header dimensions";
+            return std::unexpected { "Bad header dimensions" };
         }
 
         if (raw_header.channels != 3 && raw_header.channels != 4) {
-            return "Bad header color channel specifier";
+            return std::unexpected { "Bad header color channel specifier" };
         }
 
         if (raw_header.colorspace != 0 && raw_header.colorspace != 1) {
-            return "Bad header colorspace specifier";
+            return std::unexpected { "Bad header colorspace specifier" };
         }
 
         return Header {
@@ -158,35 +166,35 @@ struct Header {
         };
     }
 
-    template<typename Allocator = std::allocator<uint8_t>> static constexpr Error<Header, std::string_view> from_image(Gfx::Image<Allocator> const& image) {
+    template<typename Allocator = std::allocator<uint8_t>> static constexpr std::expected<Header, std::string_view> from_image(Gfx::Image<Allocator> const& image) {
         Header header;
 
         const auto [w, h] = image.dimensions();
 
         if (w > std::numeric_limits<uint32_t>::max())
-            return "Image is too wide";
+            return std::unexpected { "Image is too wide" };
 
         if (h > std::numeric_limits<uint32_t>::max())
-            return "Image is too high";
+            return std::unexpected { "Image is too high" };
 
         if (w == 0)
-            return "Image has zero width";
+            return std::unexpected { "Image has zero width" };
 
         if (h == 0)
-            return "Image has zero height";
+            return std::unexpected { "Image has zero height" };
 
         header.dims = Stf::vector<uint32_t>(w, h);
 
         switch (image.color_format()) {
         case ColorFormat::RGBA8u: header.channels = Channels::RGBA; break;
         case ColorFormat::RGB8u: header.channels = Channels::RGB; break;
-        default: return "Image has unsupported color format, only RGBA8u and RGB8u are supported";
+        default: return std::unexpected { "Image has unsupported color format, only RGBA8u and RGB8u are supported" };
         }
 
         switch (image.color_space()) {
         case Gfx::ColorSpace::SRGB: header.colorspace = ColorSpace::SRGBLinearAlpha; break;
         case Gfx::ColorSpace::Linear: header.colorspace = ColorSpace::Linear; break;
-        default: return "Image has unsupported colorspace, only SRGB and Linear are supported";
+        default: return std::unexpected { "Image has unsupported colorspace, only SRGB and Linear are supported" };
         }
 
         return header;
@@ -312,7 +320,7 @@ struct QoIDecoder {
     }
 };
 
-template<std::input_iterator IIter> constexpr Error<IIter, std::string_view> decode_payload(IIter it, IIter end, std::span<uint8_t> out_image_data) {
+template<std::input_iterator IIter> constexpr std::expected<IIter, std::string_view> decode_payload(IIter it, IIter end, std::span<uint8_t> out_image_data) {
     QoIDecoder state {
         .out_beg = out_image_data.data(),
         .out_end = out_image_data.data() + out_image_data.size(),
@@ -330,19 +338,19 @@ template<std::input_iterator IIter> constexpr Error<IIter, std::string_view> dec
 
         for (size_t i = 0; i < extra_size; i++) {
             if (it == end)
-                return "Insufficient data (while reading a block's extra data)";
+                return std::unexpected { "Insufficient data (while reading a block's extra data)" };
             extra_data[i] = *it++;
         }
 
         if (!state.process_block(leading, extra_data))
-            return "Overflow while reading QoI blocks";
+            return std::unexpected { "Overflow while reading QoI blocks" };
     }
 
     return it;
 }
 
 template<typename Allocator = std::allocator<uint8_t>, std::input_iterator IIter>
-constexpr Error<IIter, std::string_view> decode(IIter begin, IIter end, Gfx::Image<Allocator>& image, std::optional<Header> given_header = std::nullopt) {
+constexpr std::expected<IIter, std::string_view> decode(IIter begin, IIter end, Gfx::Image<Allocator>& image, std::optional<Header> given_header = std::nullopt) {
     IIter it = begin;
 
     Header header;
@@ -355,22 +363,22 @@ constexpr Error<IIter, std::string_view> decode(IIter begin, IIter end, Gfx::Ima
     const auto [h_w, h_h] = header.dims;
 
     if (i_w != h_w || i_h != h_h)
-        return "Image metadata does not match header metadata";
+        return std::unexpected { "Image metadata does not match header metadata" };
 
     unwrap_or_return(it, decode_payload(it, end, image), res.error());
 
     for (size_t i = 0; i < 7; i++) {
         if (it == end)
-            return "Insufficient data (while reading ending bytes)";
+            return std::unexpected { "Insufficient data (while reading ending bytes)" };
         if (*it++ != 0)
-            return "Bad ending bytes";
+            return std::unexpected { "Bad ending bytes" };
     }
 
     return it;
 }
 
 template<typename Allocator = std::allocator<uint8_t>, std::input_iterator IIter>
-constexpr Error<Gfx::Image<Allocator>, std::string_view> decode(IIter begin, IIter end, Allocator const& allocator = Allocator()) {
+constexpr std::expected<Gfx::Image<Allocator>, std::string_view> decode(IIter begin, IIter end, Allocator const& allocator = Allocator()) {
     IIter it = begin;
 
     Header header;
@@ -383,7 +391,7 @@ constexpr Error<Gfx::Image<Allocator>, std::string_view> decode(IIter begin, IIt
 }
 
 template<typename Allocator = std::allocator<uint8_t>, std::output_iterator<uint8_t> OIter>
-constexpr Error<OIter, std::string_view> encode(OIter out_beg, Gfx::Image<Allocator> const& image) {
+constexpr std::expected<OIter, std::string_view> encode(OIter out_beg, Gfx::Image<Allocator> const& image) {
     Header header;
     unwrap_or_return(header, Header::from_image(image), res.error());
     const auto header_bytes = header.to_bytes();

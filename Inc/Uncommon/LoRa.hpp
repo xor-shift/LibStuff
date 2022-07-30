@@ -224,7 +224,7 @@ struct Lora {
         if (request && (HAL_UART_Transmit(&huart, expected_command.data(), expected_command.size(), 30) != HAL_OK))
             return "Timed out transmitting command";
 
-        if (request && (HAL_UART_Receive(&huart, received_command.data(), received_command.size(), 30) != HAL_OK))
+        if (HAL_UART_Receive(&huart, received_command.data(), received_command.size(), 30) != HAL_OK)
             return "Timed out receiving command";
 
         if (expected_command != received_command)

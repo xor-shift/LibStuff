@@ -65,6 +65,7 @@ constexpr int get_characteristic(Nominal resistance) {
         default: return 3977;
     }
     // clang-format on
+    std::unreachable();
 }
 
 constexpr std::pair<std::array<float, 4>, std::array<float, 4>> get_ntc_coefficients(Nominal resistance) {
@@ -124,7 +125,7 @@ constexpr std::pair<float, float> solve_voltage_divider(float r_known, float v_c
     return { r_1_sol, r_2_sol };
 }
 
-float calculate_ntc(Nominal r_nom, float r_ntc) {
+constexpr float calculate_ntc(Nominal r_nom, float r_ntc) {
     const auto [regular_coeff, inverse_coeff] = get_ntc_coefficients(r_nom);
     auto const& [a, b, c, d] = inverse_coeff;
 

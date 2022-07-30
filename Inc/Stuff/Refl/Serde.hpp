@@ -7,11 +7,11 @@
 #include <cstddef>
 #include <cstring>
 #include <optional>
+#include <span>
 #include <tuple>
 #include <utility>
 
 #include <Stuff/Util/DummyIterator.hpp>
-#include <Stuff/Util/Util.hpp>
 
 #include "./ReflNew.hpp"
 
@@ -142,13 +142,9 @@ template<typename T, typename It> struct Serializer<T const&, It> { };
 
 }
 
-template<typename T, typename It> constexpr It serialize(It it, T const& v) {
-    return Detail::Serializer<T, It>::serialize(it, v);
-}
+template<typename T, typename It> constexpr It serialize(It it, T const& v) { return Detail::Serializer<T, It>::serialize(it, v); }
 
-template<typename T, typename It> constexpr It deserialize(T& v, It it) {
-    return Detail::Serializer<T, It>::deserialize(v, it);
-}
+template<typename T, typename It> constexpr It deserialize(T& v, It it) { return Detail::Serializer<T, It>::deserialize(v, it); }
 
 namespace Detail {
 

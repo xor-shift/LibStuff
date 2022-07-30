@@ -2,7 +2,6 @@
 
 #include <Stuff/Refl/ReflNew.hpp>
 #include <Stuff/Refl/Serde.hpp>
-#include <Stuff/Maths/Maths.hpp>
 
 namespace Foo {
 
@@ -64,9 +63,9 @@ TEST(Serde, Serde) {
     ASSERT_TRUE((std::is_same_v<Stf::Refl::tuple_element_t<0, SomeNamespace::ExternallyReflectableStruct>, int>));
     ASSERT_TRUE((std::is_same_v<Stf::Refl::tuple_element_t<1, SomeNamespace::ExternallyReflectableStruct>, float>));
 
-    //ASSERT_EQ(std::tuple_size_v<SomeNamespace::ExternallyReflectableStruct>, 2);
-    //ASSERT_TRUE((std::is_same_v<std::tuple_element_t<0, SomeNamespace::ExternallyReflectableStruct>, int>));
-    //ASSERT_TRUE((std::is_same_v<std::tuple_element_t<1, SomeNamespace::ExternallyReflectableStruct>, float>));
+    // ASSERT_EQ(std::tuple_size_v<SomeNamespace::ExternallyReflectableStruct>, 2);
+    // ASSERT_TRUE((std::is_same_v<std::tuple_element_t<0, SomeNamespace::ExternallyReflectableStruct>, int>));
+    // ASSERT_TRUE((std::is_same_v<std::tuple_element_t<1, SomeNamespace::ExternallyReflectableStruct>, float>));
 
     InternallyReflectableStruct asd {};
     InternallyReflectableStruct::MemReflHelper<0>::get(asd) = 1;
@@ -94,7 +93,6 @@ TEST(Serde, Serde) {
     ASSERT_EQ(it, a_ser.cend());
     ASSERT_EQ(a_deser.a, a.a);
     ASSERT_EQ(a_deser.b, a.b);
-
 
     std::array<uint8_t, Stf::serialized_size_v<decltype(b)>> b_ser;
     Stf::serialize(b_ser.begin(), b);
@@ -169,9 +167,8 @@ TEST(Serde, Comprehensive) {
     comp.a.first[1] = base;
     comp.a.second = 20.21f;
 
-    const size_t expected_base_size = sizeof(int) + sizeof(float) + sizeof(int) + sizeof(int) * 2 + sizeof(float) * 2
-        + sizeof(int) * 2 + sizeof(int[2]) * 2 + (sizeof(float) + sizeof(int))
-        + ((sizeof(float) + sizeof(int)) * 2 + 1);
+    const size_t expected_base_size = sizeof(int) + sizeof(float) + sizeof(int) + sizeof(int) * 2 + sizeof(float) * 2 + sizeof(int) * 2 + sizeof(int[2]) * 2
+        + (sizeof(float) + sizeof(int)) + ((sizeof(float) + sizeof(int)) * 2 + 1);
 
     ASSERT_EQ(Stf::serialized_size_v<ComprehensiveBase>, expected_base_size);
     ASSERT_EQ(Stf::serialized_size_v<Comprehensive>, (expected_base_size + 1) * 2 + sizeof(float));
@@ -184,5 +181,5 @@ TEST(Serde, Comprehensive) {
     ASSERT_FALSE(deserialized.a.first[0].has_value());
     ASSERT_TRUE(deserialized.a.first[1].has_value());
 
-    //auto const& base = *deserialized.a.first[1];
+    // auto const& base = *deserialized.a.first[1];
 }

@@ -4,6 +4,7 @@
 
 #include <Stuff/Maths/Maths.hpp>
 #include <Stuff/Maths/Scalar.hpp>
+#include <Stuff/Util/Tuple.hpp>
 
 #define SASSERT_FALSE(condition) \
     static_assert(!condition);   \
@@ -17,32 +18,16 @@
     static_assert(lhs == rhs); \
     ASSERT_EQ(lhs, rhs)
 
-TEST(Scalar, Utility) {
-    const auto abs_0 = Stf::abs(-1.);
-    const auto abs_1 = Stf::abs(-0.f);
-    const auto abs_2 = Stf::abs(-1);
-
-    ASSERT_FLOAT_EQ(abs_0, 1.);
-    ASSERT_FLOAT_EQ(abs_1, 0.f);
-    ASSERT_EQ(abs_2, 1);
-    SASSERT_TRUE((std::is_same_v<int, std::decay_t<decltype(abs_2)>>));
-
+TEST(Scalar, Basic) {
     SASSERT_TRUE(Stf::is_close(-1.000001, -0.999999));
 
-    SASSERT_EQ(Stf::pow(1.5f, 2), 2.25f);
-    SASSERT_EQ(Stf::pow(1.5f, -2), 1.f/2.25f);
+    ASSERT_FLOAT_EQ(Stf::abs(-1.), 1.);
+    ASSERT_FLOAT_EQ(Stf::abs(-0.f), 0.f);
+    ASSERT_EQ(Stf::abs(-1), 1);
 }
 
-TEST(Float, Classification) {
+TEST(Scalar, Classification) {
     using FloatLims = std::numeric_limits<float>;
-    using Parts = Stf::Detail::FloatParts<float>;
-
-    constexpr float f_0 = 3.141592502593994140625f;
-    constexpr auto parts_0 = Stf::float_to_parts(f_0);
-
-    SASSERT_EQ(parts_0.sign, false);
-    SASSERT_EQ(parts_0.exponent, 128u);
-    SASSERT_EQ(parts_0.fraction, 4788186u);
 
     constexpr auto nan_f = FloatLims::quiet_NaN();
     constexpr auto inf_f = FloatLims::infinity();
@@ -59,10 +44,10 @@ TEST(Float, Classification) {
     SASSERT_TRUE(Stf::is_finite(min_f / 2.f));
     SASSERT_FALSE(Stf::is_finite(NAN));
     SASSERT_FALSE(Stf::is_finite(inf_f));
-    SASSERT_FALSE(Stf::is_finite(Stf::exp(800.f)));
+    ASSERT_FALSE(Stf::is_finite(Stf::exp(800.f)));
 
     SASSERT_TRUE(Stf::is_inf(inf_f));
-    SASSERT_TRUE(Stf::is_inf(Stf::exp(800.f)));
+    ASSERT_TRUE(Stf::is_inf(Stf::exp(800.f)));
     SASSERT_FALSE(Stf::is_inf(0.f));
     SASSERT_FALSE(Stf::is_inf(min_f / 2.f));
     SASSERT_FALSE(Stf::is_inf(NAN));
@@ -78,27 +63,60 @@ TEST(Float, Classification) {
     SASSERT_FALSE(Stf::is_normal(1.17549421069e-38f));
 }
 
-TEST(Float, Manipulation) {
-    constexpr auto inf = std::numeric_limits<float>::infinity();
+template<size_t N, typename Ret, typename... Args>
+using TestVectorArray = std::array<std::tuple<std::string_view, Ret (*)(Args...), Ret (*)(Args...), std::tuple<Args...>, Ret>, N>;
 
-    // NOTICE: ldexp is not compliant as commented above it's definition
+template<size_t N, typename Ret, typename... Args> static void vector_test(TestVectorArray<N, Ret, Args...> const& vec) {
+    for (auto [name, test_fn, reference_fn, test_arguments, reference_val] : vec) {
+        double lhs = Stf::tuple_call(test_fn, test_arguments);
+        double rhs = reference_fn != nullptr ? Stf::tuple_call(reference_fn, test_arguments) : reference_val;
 
-    SASSERT_EQ(Stf::ldexp(7.f, -4), .4375f);
-    SASSERT_EQ(Stf::ldexp(-0.f, 10), -0.f);
-    SASSERT_EQ(Stf::ldexp(-inf, 10), -inf);
-    SASSERT_EQ(Stf::ldexp(inf, 10), inf);
-    SASSERT_EQ(Stf::ldexp(1.f, 128), inf);
+        if (!Stf::is_close(lhs, rhs)) {
+            fmt::print("Mathematical function test named '{}' failed.\n", name);
+            ASSERT_FLOAT_EQ(lhs, rhs);
+        }
+    }
+}
+
+TEST(Scalar, Exponential) {
+    TestVectorArray<3, double, double> test_vector { {
+        { "e^0", Stf::exp<double>, std::exp, 0.001, 1 },
+        { "e^1", Stf::exp<double>, std::exp, 1, M_E },
+        { "e^pi", Stf::exp<double>, std::exp, M_PI, 23.140692632779 },
+    } };
+
+    vector_test(test_vector);
+}
+
+TEST(Scalar, FloatUtils) {
+    using FloatLims = std::numeric_limits<float>;
+    using Parts = Stf::FloatParts<float>;
+
+    constexpr float f_0 = 3.141592502593994140625f;
+    constexpr auto parts_0 = Stf::float_to_parts(f_0);
+
+    SASSERT_EQ(parts_0.sign, false);
+    SASSERT_EQ(parts_0.exponent, 128u);
+    SASSERT_EQ(parts_0.fraction, 4788186u);
+}
+
+TEST(Scalar, Power) {
+    auto pow = [](float x, int y) -> float {
+        return std::pow(x, y);
+    };
+
+    TestVectorArray<2, float, float, int> test_vector { {
+        { "1.5 ** 2", Stf::pow, pow, {1.5f, 2}, 2.25f },
+        { "1.5 ** -2", Stf::pow, pow, {1.5f, -2}, 1.f/2.25f },
+    } };
+
+    vector_test(test_vector);
 }
 
 TEST(Scalar, Approximations) {
-    static const constinit auto e_to_pi = Stf::exp(M_PI);
-    static const constinit auto cos_of_1 = Stf::cos(1.);
-    static const constinit auto sin_of_e = Stf::sin(M_E);
-    static const constinit auto one_half_to_4
-        = Stf::Detail::Pow::pow_impl<float, Stf::Detail::Pow::IntegralExponent<int>>(0.5f, { 4 }, 1.f, 0);
-
-    ASSERT_FLOAT_EQ(23.140692632779, e_to_pi);
-    ASSERT_FLOAT_EQ(std::pow(M_E, M_PI), e_to_pi);
+    const auto cos_of_1 = Stf::cos(1.);
+    const auto sin_of_e = Stf::sin(M_E);
+    const auto one_half_to_4 = Stf::pow(0.5f, 4);
 
     ASSERT_FLOAT_EQ(0.540302305868139, cos_of_1);
     ASSERT_FLOAT_EQ(std::cos(1.), cos_of_1);

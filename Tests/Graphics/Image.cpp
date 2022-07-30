@@ -1,11 +1,14 @@
 #include "gtest/gtest.h"
 
+#include <Stuff/Util/Hacks/Concepts.hpp>
+#include <Stuff/Util/Hacks/Expected.hpp>
+#include <Stuff/Util/Hacks/Try.hpp>
+
 #include <fstream>
 
+#include <Stuff/Files/Format.hpp>
 #include <Stuff/Graphics/Image.hpp>
 #include <Stuff/Maths/CRC.hpp>
-
-#include <Stuff/Files/Format.hpp>
 
 TEST(Image, Idk) {
     Stf::Gfx::Image image(4, 8, Stf::Gfx::Colors::black);
@@ -34,22 +37,20 @@ template<typename Allocator = std::allocator<uint8_t>> constexpr uint32_t image_
 }
 
 template<typename IIter, typename Allocator = std::allocator<uint8_t>>
-constexpr Stf::Error<Stf::Gfx::Image<Allocator>, std::string_view> decode_and_validate(IIter begin, IIter end, uint32_t expected_cksum) {
-    auto res = Stf::Gfx::Formats::QoI::decode(begin, end);
-    if (!res)
-        return res.error();
+constexpr std::expected<Stf::Gfx::Image<Allocator>, std::string_view> decode_and_validate(IIter begin, IIter end, uint32_t expected_cksum) {
+    auto decoded = TRYX(Stf::Gfx::Formats::QoI::decode(begin, end));
 
-    if (const auto cksum = image_checksum<Allocator>(*res); cksum != expected_cksum)
-        return "Invalid image checksum";
+    if (const auto cksum = image_checksum<Allocator>(decoded); cksum != expected_cksum)
+        return std::unexpected { "Invalid image checksum" };
 
-    return *res;
+    return decoded;
 }
 
 template<typename Allocator = std::allocator<uint8_t>>
-static Stf::Error<Stf::Gfx::Image<Allocator>, std::string_view> decode_and_validate(const char* file, uint32_t expected_cksum) {
+static std::expected<Stf::Gfx::Image<Allocator>, std::string_view> decode_and_validate(const char* file, uint32_t expected_cksum) {
     std::ifstream ifs(file, std::ios::binary);
     if (!ifs)
-        return "Failed to open file";
+        return std::unexpected { "Failed to open file" };
     return decode_and_validate<std::istreambuf_iterator<char>, Allocator>(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>(), expected_cksum);
 }
 

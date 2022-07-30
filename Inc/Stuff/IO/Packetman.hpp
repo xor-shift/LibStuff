@@ -27,6 +27,7 @@ struct PacketManStatistics {
     size_t length_errors = 0;
     size_t rx_redundant_packets = 0;
     size_t rx_dropped_packets = 0;
+    size_t rx_packets = 0;
 
     size_t state_resets = 0;
 
@@ -64,11 +65,11 @@ struct PacketManagerBase {
 
     PacketManStatistics stats {};
 
-    virtual void tx_byte(uint8_t b) { }
-
     virtual void tx_buffer(uint8_t* b, size_t n) { }
 
     virtual void rx_packet(std::span<const uint8_t> p, PacketHeader header) { }
+
+    virtual void prepare_tx() {}
 
     template<typename T> uint32_t tx_packet(T const& v, size_t count = 1) {
         if (!serialize_data(v))
@@ -82,9 +83,10 @@ struct PacketManagerBase {
 
         ++last_sent_packet_order;
 
-        while (count-- > 0)
+        while (count-- > 0) {
+            prepare_tx();
             tx_buffer(tx_buf.data(), encoded_size);
-
+        }
         return last_sent_packet_order;
     }
 
@@ -241,6 +243,7 @@ private:
         stats.rx_dropped_packets += (given_header.order - 1) - last_received_packet_order;
         last_received_packet_order = given_header.order;
 
+        ++stats.rx_packets;
         rx_packet(payload_span, given_header);
     }
 };

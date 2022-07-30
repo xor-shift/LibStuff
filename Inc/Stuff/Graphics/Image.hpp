@@ -7,7 +7,6 @@
 #include <span>
 
 #include <Stuff/Maths/Maths.hpp>
-#include <Stuff/Util/Util.hpp>
 
 namespace Stf::Gfx {
 

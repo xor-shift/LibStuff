@@ -27,12 +27,15 @@ struct ObjectExpression {
     constexpr FieldExpression<ObjectExpression> operator[](const char* s) const;
 
     constexpr bool format(std::span<char>& buf) const {
-        if (buf.size() < name.size())
+        if (buf.size() < name.size() + 2)
             return false;
 
-        const auto end = std::copy(name.cbegin(), name.cend(), buf.begin());
+        auto it = buf.begin();
+        //*it++ = '"';
+        it = std::copy(name.cbegin(), name.cend(), it);
+        //*it++ = '"';
 
-        buf = { end, buf.end() };
+        buf = { it, buf.end() };
 
         return true;
     }
@@ -62,7 +65,9 @@ template<typename Object> struct FieldExpression {
     }
 };
 
-template<typename LHS, typename T> struct AssignmentExpression {
+template<typename LHS, typename T> struct AssignmentExpression;
+
+template<typename LHS, std::integral T> struct AssignmentExpression<LHS, T> {
     LHS base;
     T v;
 
@@ -79,8 +84,7 @@ template<typename LHS, typename T> struct AssignmentExpression {
         return format_impl(buf);
     }
 
-    constexpr std::enable_if_t<std::is_integral_v<T>, bool> format_impl(std::span<char>& buf) const {
-
+    constexpr bool format_impl(std::span<char>& buf) const {
         const auto is_neg = v < 0;
 
         const auto abs_v = static_cast<std::make_unsigned_t<T>>(Stf::abs(v));
@@ -106,13 +110,38 @@ template<typename LHS, typename T> struct AssignmentExpression {
     }
 };
 
+template<typename LHS> struct AssignmentExpression<LHS, std::string_view> {
+    LHS base;
+    std::string_view v;
+
+    constexpr bool format(std::span<char>& buf) const {
+        if (!base.format(buf))
+            return false;
+
+        if (buf.empty())
+            return false;
+
+        buf[0] = '=';
+        buf = { buf.begin() + 1, buf.end() };
+
+        return format_impl(buf);
+    }
+
+    constexpr bool format_impl(std::span<char>& buf) const {
+        auto it = buf.begin();
+        *it++ = '"';
+        it = std::copy(v.begin(), v.end(), it);
+        *it++ = '"';
+        buf = { it, buf.end() };
+        return true;
+    }
+};
+
 constexpr FieldExpression<ObjectExpression> ObjectExpression::txt() const { return (*this)["txt"]; }
 constexpr FieldExpression<ObjectExpression> ObjectExpression::val() const { return (*this)["val"]; }
 constexpr FieldExpression<ObjectExpression> ObjectExpression::operator[](const char* s) const { return { *this, s }; }
 
-template<typename Object>
-template<typename T>
-constexpr AssignmentExpression<FieldExpression<Object>, T> FieldExpression<Object>::operator=(const T& other) {
+template<typename Object> template<typename T> constexpr AssignmentExpression<FieldExpression<Object>, T> FieldExpression<Object>::operator=(const T& other) {
     return { *this, other };
 }
 
@@ -151,7 +180,7 @@ template<typename T> constexpr bool set(std::string_view name, T val) {
 }
 
 template<std::floating_point T> bool set(std::string_view name, T val, unsigned digits) {
-    return set(name, static_cast<unsigned>(std::round(val * std::pow(10, digits))));
+    return set(name, static_cast<long>(std::round(val * std::pow(10, digits))));
 }
 
 }

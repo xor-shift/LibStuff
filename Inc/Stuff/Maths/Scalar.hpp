@@ -6,8 +6,13 @@
 #include <limits>
 #include <optional>
 
-#include "Scalar/Other.hpp"
-#include "Scalar/Scalar.hpp"
+#include "Scalar/Basic.hpp"
+#include "Scalar/Classification.hpp"
+#include "Scalar/Exponential.hpp"
+#include "Scalar/FloatUtils.hpp"
+#include "Scalar/Interpolation.hpp"
+#include "Scalar/Manipulation.hpp"
+#include "Scalar/Power.hpp"
 #include "Scalar/Trig.hpp"
 
 namespace Stf::Detail::Pow {
@@ -51,7 +56,7 @@ template<std::signed_integral T> struct IntegralExponent<T> {
 
     constexpr size_t is_zero() const { return v == 0; }
 
-    constexpr abs_type abs() const { return abs_type { static_cast<std::make_unsigned_t<T>>(::Stf::abs(v)) }; }
+    constexpr abs_type abs() const { return abs_type { static_cast<std::make_unsigned_t<T>>(abs(v)) }; }
 
     constexpr bool is_negative() const { return v < 0; }
 
@@ -97,10 +102,10 @@ constexpr B pow_impl(B b, E e, B mult_identity, auto mod) {
 
 namespace Stf {
 
-template<std::floating_point T>
+/*template<std::floating_point T>
 constexpr T pow(T base, int exponent) {
     using ExpType = Detail::Pow::IntegralExponent<int>;
     return Detail::Pow::pow_impl<T, ExpType, false>(base, {exponent}, static_cast<T>(1), 0);
-}
+}*/
 
 }

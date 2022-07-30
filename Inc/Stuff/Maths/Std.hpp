@@ -14,11 +14,11 @@ template<size_t I, ::Stf::Concepts::VectorExpression E> struct tuple_element<I, 
 
 namespace Stf {
 
-/*template<size_t I, typename T, size_t N> constexpr T& get(Stf::Vector<T, N>& e) noexcept { return e.data[I]; }
+template<size_t I, typename T, size_t N> constexpr T& get(Stf::Vector<T, N>& e) noexcept { return e.data[I]; }
 
 template<size_t I, typename T, size_t N> constexpr T&& get(Stf::Vector<T, N>&& e) noexcept {
     return std::move(e.data[I]);
-}*/
+}
 
 template<size_t I, ::Stf::Concepts::VectorExpression E>
     requires(I < E::vector_size)

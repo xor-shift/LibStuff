@@ -1,7 +1,6 @@
 #include <Stuff/Files/Format.hpp>
 
 #include <Stuff/Util/Hacks/Concepts.hpp>
-#include <Stuff/Util/Error.hpp>
 
 #include <concepts>
 #include <cstddef>
@@ -129,12 +128,8 @@ struct Header {
     ColorSpace colorspace;
 
     template<std::input_iterator IIter> static constexpr std::expected<Header, std::string_view> from_bytes(IIter&& begin, IIter end) {
-        RawHeader raw_header;
-        unwrap_or_return(raw_header, RawHeader::from_bytes(std::forward<IIter>(begin), end), res.error());
-
-        Header header;
-        unwrap_or_return(header, from_raw(raw_header), res.error());
-
+        const auto raw_header = TRYX(RawHeader::from_bytes(std::forward<IIter>(begin), end));
+        const auto header = TRYX(from_raw(raw_header));
         return header;
     }
 
@@ -357,7 +352,7 @@ constexpr std::expected<IIter, std::string_view> decode(IIter begin, IIter end, 
     if (given_header)
         header = *given_header;
     else
-        unwrap_or_return(header, Header::from_bytes(std::forward<IIter>(it), end), res.error());
+        header = TRYX(Header::from_bytes(std::forward<IIter>(it), end));
 
     const auto [i_w, i_h] = image.dimensions();
     const auto [h_w, h_h] = header.dims;
@@ -365,7 +360,7 @@ constexpr std::expected<IIter, std::string_view> decode(IIter begin, IIter end, 
     if (i_w != h_w || i_h != h_h)
         return std::unexpected { "Image metadata does not match header metadata" };
 
-    unwrap_or_return(it, decode_payload(it, end, image), res.error());
+    it = TRYX(decode_payload(it, end, image));
 
     for (size_t i = 0; i < 7; i++) {
         if (it == end)
@@ -381,19 +376,17 @@ template<typename Allocator = std::allocator<uint8_t>, std::input_iterator IIter
 constexpr std::expected<Gfx::Image<Allocator>, std::string_view> decode(IIter begin, IIter end, Allocator const& allocator = Allocator()) {
     IIter it = begin;
 
-    Header header;
-    unwrap_or_return(header, Header::from_bytes(std::forward<IIter>(it), end), res.error());
+    const auto header = TRYX(Header::from_bytes(std::forward<IIter>(it), end));
 
     Gfx::Image<Allocator> image(header.dims[0], header.dims[1], allocator);
-    unwrap_or_return(std::ignore, decode(it, end, image, header), res.error());
+    std::ignore = TRYX(decode(it, end, image, header));
 
     return image;
 }
 
 template<typename Allocator = std::allocator<uint8_t>, std::output_iterator<uint8_t> OIter>
 constexpr std::expected<OIter, std::string_view> encode(OIter out_beg, Gfx::Image<Allocator> const& image) {
-    Header header;
-    unwrap_or_return(header, Header::from_image(image), res.error());
+    const auto header = TRYX(Header::from_image(image));
     const auto header_bytes = header.to_bytes();
 
     using color_type = QoIColorMap::color_type;

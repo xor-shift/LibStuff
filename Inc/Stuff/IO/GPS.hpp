@@ -14,7 +14,6 @@
 #include <Stuff/Maths/Scalar.hpp>
 #include <Stuff/Refl/ReflNew.hpp>
 #include <Stuff/Util/Conv.hpp>
-#include <Stuff/Util/Error.hpp>
 
 namespace Stf::GPS {
 

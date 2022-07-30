@@ -8,7 +8,6 @@
 #include <functional>
 
 #include <Stuff/Serde/Serde.hpp>
-#include <Stuff/Util/Error.hpp>
 
 namespace Stf::Serde::New {
 

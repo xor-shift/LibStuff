@@ -64,7 +64,7 @@ struct QoITest {
 
     void run() const {
         auto res_in_qoi = decode_and_validate(in_qoi, decoded_cksum);
-        ASSERT_NO_ERROR(res_in_qoi);
+        ASSERT_TRUE(res_in_qoi);
         auto& img_in_qoi = *res_in_qoi;
 
         if (out_data != nullptr) {
@@ -83,7 +83,7 @@ struct QoITest {
         }
 
         auto res_redecode_data = decode_and_validate(vec_reencode_qoi.begin(), vec_reencode_qoi.end(), decoded_cksum);
-        ASSERT_NO_ERROR(res_redecode_data);
+        ASSERT_TRUE(res_redecode_data);
         auto& img_redecode_data = *res_redecode_data;
 
         if (redecode_data != nullptr) {

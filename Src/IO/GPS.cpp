@@ -2,7 +2,6 @@
 #include <Stuff/Util/Hacks/Expected.hpp>
 
 #include <Stuff/IO/GPS.hpp>
-#include <Stuff/Util/Error.hpp>
 
 namespace Stf::GPS::Detail::NMEA {
 

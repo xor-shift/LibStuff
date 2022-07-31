@@ -1,5 +1,9 @@
 #pragma once
 
+#include <Stuff/Util/Hacks/Concepts.hpp>
+#include <Stuff/Util/Hacks/Expected.hpp>
+#include <Stuff/Util/Hacks/Try.hpp>
+
 // no includes, this is not meant to be used standalone
 
 namespace Unc {
@@ -216,38 +220,37 @@ struct Lora {
         WirelessConfiguration = 0xCF,
     };
 
-    Stf::Error<bool, std::string_view> read_registers(auto out_it, uint8_t address, uint8_t size, bool request = true) {
+    std::expected<bool, std::string_view> read_registers(auto out_it, uint8_t address, uint8_t size, bool request = true) {
         std::array<uint8_t, 3> expected_command { 0xC1, address, size };
         std::array<uint8_t, 3> received_command {};
         std::array<uint8_t, 16> recv_buf {};
 
         if (request && (HAL_UART_Transmit(&huart, expected_command.data(), expected_command.size(), 30) != HAL_OK))
-            return "Timed out transmitting command";
+            return std::unexpected { "Timed out transmitting command" };
 
         if (HAL_UART_Receive(&huart, received_command.data(), received_command.size(), 30) != HAL_OK)
-            return "Timed out receiving command";
+            return std::unexpected { "Timed out receiving command" };
 
         if (expected_command != received_command)
-            return "Didn't receive expected command";
+            return std::unexpected { "Didn't receive expected command" };
 
         if (HAL_UART_Receive(&huart, recv_buf.data(), size, 140) != HAL_OK)
-            return "Timed out receiving register data";
+            return std::unexpected { "Timed out receiving register data" };
 
         std::copy_n(recv_buf.cbegin(), size, out_it);
         return true;
     }
 
-    Stf::Error<E22Config, std::string_view> read_configuration() {
+    std::expected<E22Config, std::string_view> read_configuration() {
         // const auto guard = guarded_set_mode(Mode::Configuration);
 
         std::array<uint8_t, 7> read_buf {};
-        if (const auto res = read_registers(read_buf.begin(), 0, 7, true); res.is_error())
-            return res.error();
+        std::ignore = TRYX(read_registers(read_buf.begin(), 0, 7, true));
 
         return E22Config::disassemble(std::span<const uint8_t, 7>(read_buf.data(), 7));
     }
 
-    Stf::Error<std::pair<E22Config, std::array<uint8_t, 7>>, std::string_view> configure(E22Config config) {
+    std::expected<std::pair<E22Config, std::array<uint8_t, 7>>, std::string_view> configure(E22Config config) {
         // const auto guard = guarded_set_mode(Mode::Configuration);
 
         std::array<uint8_t, 3> command_buf { 0xC2, 0x00, 0x07 };
@@ -255,14 +258,13 @@ struct Lora {
         auto assembled = config.assemble();
 
         if (HAL_UART_Transmit(&huart, command_buf.data(), command_buf.size(), 30) != HAL_OK)
-            return "Transmitting command timed out";
+            return std::unexpected { "Transmitting command timed out" };
 
         if (HAL_UART_Transmit(&huart, assembled.data(), 7, 60) != HAL_OK)
-            return "Transmitting command contents timed out";
+            return std::unexpected { "Transmitting command contents timed out" };
 
         std::array<uint8_t, 7> read_buf {};
-        if (const auto res = read_registers(read_buf.begin(), 0, 7, false); res.is_error())
-            return res.error();
+        std::ignore = TRYX(read_registers(read_buf.begin(), 0, 7, false));
 
         return std::pair{E22Config::disassemble(std::span<const uint8_t, 7>(read_buf.data(), 7)), read_buf};
     }

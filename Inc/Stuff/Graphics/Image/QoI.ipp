@@ -1,10 +1,10 @@
 #include <Stuff/Files/Format.hpp>
 
 #include <Stuff/Util/Hacks/Concepts.hpp>
+#include <Stuff/Util/Hacks/Expected.hpp>
 
 #include <concepts>
 #include <cstddef>
-#include <expected>
 
 // types etc.
 namespace Stf::Gfx::Detail::Image::QoI {

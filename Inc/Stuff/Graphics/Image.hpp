@@ -142,6 +142,7 @@ template<typename Allocator = std::allocator<uint8_t>> struct Image {
             m_allocator.deallocate(m_data, m_capacity);
 
         m_capacity = 0;
+        m_data = nullptr;
     }
 
     constexpr void create(size_t width, size_t height) {

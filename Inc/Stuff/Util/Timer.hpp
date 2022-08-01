@@ -5,8 +5,6 @@
 #include <functional>
 #include <mutex>
 
-#include <Stuff/Util/CoroCompat.hpp>
-
 namespace Stf {
 
 namespace Detail {

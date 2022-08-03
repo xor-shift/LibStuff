@@ -2,6 +2,7 @@
 
 #include "./BLAS/Vector.hpp"
 #include "./BLAS/Matrix.hpp"
+#include "./BLAS/MatVec.hpp"
 
 #ifdef LIBSTUFF_FMT
 

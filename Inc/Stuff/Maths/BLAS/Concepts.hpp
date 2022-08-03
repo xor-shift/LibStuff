@@ -21,27 +21,3 @@ concept MatrixExpression = requires(T const& self, size_t i, size_t j) {
                            };
 
 }
-
-namespace Stf::Detail {
-
-template<typename T, typename E> struct VectorExpression {
-    using value_type = T;
-    constexpr static size_t vector_size = E::vector_size;
-
-    constexpr value_type operator[](size_t i) const { return static_cast<E const*>(this)->operator[](i); }
-};
-
-template<typename T, typename E> struct MatrixRowExpression;
-
-template<typename T, typename E> struct MatrixExpression {
-    using value_type = T;
-    static constexpr size_t rows = E::rows;
-    static constexpr size_t cols = E::cols;
-
-    // i -> row index, j -> column index
-    constexpr value_type at(size_t i, size_t j) const { return static_cast<E const*>(this)->at(i, j); }
-
-    constexpr MatrixRowExpression<T, E> operator[](size_t i) const;
-};
-
-}

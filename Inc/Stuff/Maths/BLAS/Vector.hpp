@@ -153,7 +153,7 @@ template<typename Op, Concepts::VectorExpression E> constexpr auto fold(E const&
     return v;
 }
 
-template<typename Op, Concepts::VectorExpression E> constexpr Detail::VectorMapExpression<E, Op> map(E const& e, Op op = {}) { return { {}, e, op }; }
+template<typename Op, Concepts::VectorExpression E> constexpr Detail::VectorMapExpression<E, Op> map(E const& e, Op op = {}) { return { e, op }; }
 
 template<Concepts::VectorExpression E> constexpr auto magnitude(E const& e) { return fold(e, std::plus<> {}); }
 
@@ -169,7 +169,7 @@ template<Concepts::VectorExpression E> constexpr auto normalized(E const& e) {
 
 template<Concepts::VectorExpression E> constexpr auto abs(E const& e) {
     auto op = [](typename E::value_type v) { return Stf::abs(v); };
-    return Detail::VectorMapExpression<E, decltype(op)> { {}, e, op };
+    return Detail::VectorMapExpression<E, decltype(op)> { e, op };
 }
 
 template<Concepts::VectorExpression E0, Concepts::VectorExpression E1>

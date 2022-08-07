@@ -51,6 +51,7 @@ if (LibStuffCompileTests)
             Tests/Util/Alloc.cpp
             Tests/Util/Conv.cpp
             Tests/Util/Scope.cpp
+            Tests/Util/UTF8.cpp
             )
 
     target_link_libraries(${PROJECT_NAME}_tests

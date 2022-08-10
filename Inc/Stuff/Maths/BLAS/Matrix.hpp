@@ -13,61 +13,96 @@ template<typename T, size_t R, size_t C> struct Matrix {
     T data[R * C] {};
 
     constexpr value_type at(size_t i, size_t j) const { return data[i * C + j]; }
+
+    static constexpr Matrix rotation(T yaw, T pitch, T roll)
+        requires(R == 3) && (C == 3)
+    {
+        const auto a = yaw;
+        const auto b = pitch;
+        const auto g = roll;
+
+        const auto sa = std::sin(a);
+        const auto sb = std::sin(b);
+        const auto sg = std::sin(g);
+        const auto ca = std::cos(a);
+        const auto cb = std::cos(b);
+        const auto cg = std::cos(g);
+
+        return {
+            cb * cg,
+            sa * sb * cg - ca * sg,
+            ca * sb * cg + sa * sg,
+            cb * sg,
+            sa * sb * sg + ca * cg,
+            ca * sb * sg - sa * cg,
+            -sb,
+            sa * cb,
+            ca * cb,
+        };
+    }
+
+    static constexpr Matrix rotation(T yaw, T pitch, T roll)
+        requires(R == 4) && (C == 4)
+    {
+        const auto base = Matrix<T, 3, 3>::rotation(yaw, pitch, roll);
+
+        return {
+            base.at(0, 0), base.at(0, 1), base.at(0, 2), 0, //
+            base.at(1, 0), base.at(1, 1), base.at(1, 2), 0, //
+            base.at(2, 0), base.at(2, 1), base.at(2, 2), 0, //
+            0, 0, 0, 1                                      //
+        };
+    }
+
+    static constexpr Matrix rotation(T yaw, T pitch)
+        requires(R == 3) && (C == 3)
+    {
+        const auto a = yaw;
+        const auto b = pitch;
+
+        const auto sa = std::sin(a);
+        const auto sb = std::sin(b);
+        const auto ca = std::cos(a);
+        const auto cb = std::cos(b);
+
+        return {
+            cb, sa * sb, ca * sb, //
+            0, ca, -sa,           //
+            -sb, sa * cb, ca * cb //
+        };
+    }
+
+    static constexpr Matrix rotation(T yaw, T pitch)
+        requires(R == 4) && (C == 4)
+    {
+        const auto base = Matrix<T, 3, 3>::rotation(yaw, pitch);
+
+        return {
+            base.at(0, 0), base.at(0, 1), base.at(0, 2), 0, //
+            base.at(1, 0), base.at(1, 1), base.at(1, 2), 0, //
+            base.at(2, 0), base.at(2, 1), base.at(2, 2), 0, //
+            0, 0, 0, 1                                      //
+        };
+    }
+
+    static constexpr Matrix ortographic(T left, T right, T bottom, T top, T near, T far)
+        requires(R == 4) && (C == 4)
+    {
+        const auto two = static_cast<T>(2);
+        const auto zero = static_cast<T>(0);
+        return {
+            two / (right - left), zero, zero, -(right + left) / (right - left), //
+            zero, two / (top - bottom), zero, -(top + bottom) / (top - bottom), //
+            zero, zero, -two / (far - near), -(far + near) / (far - near),      //
+            zero, zero, zero, static_cast<T>(1)                                 //
+        };
+    }
 };
 
 template<typename T, size_t R, size_t C, typename... Ts>
     requires(R* C == 1 + sizeof...(Ts))
 constexpr Matrix<T, R, C> matrix(T v, Ts... vs) {
     return { {}, vector(v, vs...) };
-}
-
-template<typename T>
-constexpr Matrix<T, 3, 3> rotation_matrix_3d(T yaw, T pitch, T roll) {
-    const auto a = yaw;
-    const auto b = pitch;
-    const auto g = roll;
-
-    const auto sa = std::sin(a);
-    const auto sb = std::sin(b);
-    const auto sg = std::sin(g);
-    const auto ca = std::cos(a);
-    const auto cb = std::cos(b);
-    const auto cg = std::cos(g);
-
-    return {
-        cb*cg, sa*sb*cg - ca*sg, ca*sb*cg + sa*sg,
-        cb*sg, sa*sb*sg + ca*cg, ca*sb*sg - sa*cg,
-        -sb, sa*cb, ca*cb,
-    };
-}
-
-template<typename T>
-constexpr Matrix<T, 3, 3> rotation_matrix_3d(T yaw, T pitch) {
-    const auto a = yaw;
-    const auto b = pitch;
-
-    const auto sa = std::sin(a);
-    const auto sb = std::sin(b);
-    const auto ca = std::cos(a);
-    const auto cb = std::cos(b);
-
-    return {
-        cb, sa*sb, ca*sb,
-        0, ca, -sa,
-        -sb, sa*cb, ca*cb,
-    };
-}
-
-template<Concepts::MatrixExpression E>
-requires(E::rows == 3) && (E::cols == 3)
-constexpr auto transform_to_homogenous(E const& e) {
-    using T = typename E::value_type;
-    return Matrix<T, 4, 4> {
-        e.at(0, 0), e.at(0, 1), e.at(0, 2), static_cast<T>(0),
-        e.at(1, 0), e.at(1, 1), e.at(1, 2), static_cast<T>(0),
-        e.at(2, 0), e.at(2, 1), e.at(2, 2), static_cast<T>(0),
-        static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1),
-    };
 }
 
 }

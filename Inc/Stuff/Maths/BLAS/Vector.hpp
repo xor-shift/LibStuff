@@ -153,6 +153,19 @@ template<typename Op, Concepts::VectorExpression E> constexpr auto fold(E const&
     return v;
 }
 
+/// @remarks
+/// It is recommended vectors instead of expressions are passed into this function.
+template<Concepts::VectorExpression E0, Concepts::VectorExpression E1> constexpr bool operator==(E0 const& e_0, E1 const& e_1) {
+    if constexpr (E0::vector_size != E1::vector_size)
+        return false;
+
+    for (auto i = 0uz; i < E0::vector_size; i++)
+        if (e_0[i] != e_1[i])
+            return false;
+
+    return true;
+}
+
 template<typename Op, Concepts::VectorExpression E> constexpr Detail::VectorMapExpression<E, Op> map(E const& e, Op op = {}) { return { e, op }; }
 
 template<Concepts::VectorExpression E> constexpr auto magnitude(E const& e) { return fold(e, std::plus<> {}); }

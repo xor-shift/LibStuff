@@ -13,6 +13,7 @@ template<typename T, size_t R, size_t C> struct Matrix {
     T data[R * C] {};
 
     constexpr value_type at(size_t i, size_t j) const { return data[i * C + j]; }
+    constexpr value_type& at(size_t i, size_t j) { return data[i * C + j]; }
 
     static constexpr Matrix rotation(T yaw, T pitch, T roll)
         requires(R == 3) && (C == 3)
@@ -96,6 +97,15 @@ template<typename T, size_t R, size_t C> struct Matrix {
             zero, zero, -two / (far - near), -(far + near) / (far - near),      //
             zero, zero, zero, static_cast<T>(1)                                 //
         };
+    }
+
+    static constexpr Matrix identity()
+        requires(R == C)
+    {
+        Matrix mat {};
+        for (auto i = 0uz; i < R; i++)
+            mat.at(i, i) = 1;
+        return mat;
     }
 };
 

@@ -8,7 +8,67 @@
 
 #include <Stuff/Maths/Maths.hpp>
 
+#include "./Traits.hpp"
+
 namespace Stf::Gfx {
+
+template<ColorFormat Format, ColorSpace Space, typename Traits = ColorTraits<Format, Space>, typename Allocator = std::allocator<typename Traits::color_type>>
+struct NewImage {
+    using traits = Traits;
+    using channel_type = typename traits::channel_type;
+    using color_type = typename traits::color_type;
+
+    constexpr NewImage(Allocator const& allocator = Allocator())
+     : m_allocator(allocator) {}
+
+    constexpr ~NewImage() noexcept {
+        destroy();
+    }
+
+    /// Resets the image data and creates a new image with the specified
+    /// information. Can be called multiple times.
+    constexpr void create(Vector<size_t, 2> dimensions) {
+        destroy();
+        m_dimensions = dimensions;
+        m_data = m_allocator.allocate(size());
+    }
+
+    /// Resets the image
+    constexpr void destroy() noexcept {
+        if (m_data != nullptr) {
+            m_allocator.deallocate(m_data, size());
+            m_dimensions = { 0, 0 };
+        }
+    }
+
+    inline const uint8_t* data() const { return reinterpret_cast<const uint8_t*>(m_data); }
+    inline uint8_t* data() { return reinterpret_cast<uint8_t*>(m_data); }
+    constexpr size_t size() { return pixel_count() * sizeof(color_type); }
+
+    constexpr Vector<size_t, 2> dimensions() const { return m_dimensions; }
+
+    constexpr std::span<color_type> pixels() { return { m_data, pixel_count() }; }
+    constexpr std::span<const color_type> pixels() const { return { m_data, pixel_count() }; }
+    constexpr size_t pixel_count() const { return m_dimensions[0] * m_dimensions[1]; }
+
+    constexpr void fill(color_type color) { std::fill_n(m_data, pixel_count(), color); }
+
+    constexpr size_t coords_to_index(Vector<size_t, 2> coords) const { return coords[0] + coords[1] * m_dimensions[0]; }
+
+    constexpr color_type& operator[](size_t index) & { return m_data[index]; }
+    constexpr color_type operator[](size_t index) const& { return m_data[index]; }
+    constexpr color_type&& operator[](size_t index) && { return m_data[index]; }
+    constexpr color_type& operator[](Vector<size_t, 2> coords) & { return (*this)[coords_to_index(coords)]; }
+    constexpr color_type operator[](Vector<size_t, 2> coords) const& { return (*this)[coords_to_index(coords)]; }
+    constexpr color_type&& operator[](Vector<size_t, 2> coords) && { return (*this)[coords_to_index(coords)]; }
+
+private:
+    Allocator m_allocator;
+
+    Vector<size_t, 2> m_dimensions { 0, 0 };
+
+    color_type* m_data { nullptr };
+};
 
 using Color = std::array<uint8_t, 4>;
 
@@ -17,34 +77,6 @@ namespace Colors {
 inline static constexpr Color black { 0, 0, 0, 255 };
 
 }
-
-enum class ColorFormat {
-    /// 8 bits per channel RGB, unsigned integer repr
-    RGB8u,
-    /// 8 bits per channel RGBA, unsigned integer repr
-    RGBA8u,
-    /// 8 bits per channel BGRA, unsigned integer repr
-    BGRA8u,
-    /// 16 bits per channel RGB, unsigned integer repr
-    RGB16u,
-    /// 16 bits per channel RGBA, unsigned integer repr
-    RGBA16u,
-    /// 32 bits per channel RGB, unsigned integer repr
-    RGB32u,
-    /// 32 bits per channel RGBA, unsigned integer repr
-    RGBA32u,
-    /// 32 bits per channel RGB, floating point repr
-    RGB32f,
-    /// 32 bits per channel RGBA, floating point repr
-    RGBA32f,
-};
-
-enum class ColorSpace {
-    /// RGB in the sRGB color space, linear alpha
-    SRGB,
-    /// Linear RGB, linear alpha
-    Linear,
-};
 
 template<typename Allocator = std::allocator<uint8_t>> struct Image {
     using allocator_type = Allocator;
@@ -160,7 +192,6 @@ template<typename Allocator = std::allocator<uint8_t>> struct Image {
     }
 
 private:
-
     allocator_type m_allocator;
 
     ColorFormat m_color_format_hint = ColorFormat::RGBA8u;

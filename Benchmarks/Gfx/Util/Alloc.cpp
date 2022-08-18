@@ -7,11 +7,9 @@
 #include <Stuff/Util/Alloc.hpp>
 
 static std::array<std::byte, 1024 * 1024 * 512> s_bump_allocator_container;
-static Stf::BumpAllocatorStorage<decltype(s_bump_allocator_container)> s_bump_allocator_storage { s_bump_allocator_container };
-template<typename T> using BumpAllocator = Stf::BumpAllocator<T, decltype(s_bump_allocator_container)>;
 
 static std::random_device s_random_device {};
-static std::mt19937_64 s_random_generator {s_random_device()};
+static std::mt19937_64 s_random_generator { s_random_device() };
 
 template<typename Allocator> static void allocate_single_size(Allocator const& alloc_ref = {}) {
     Allocator alloc { alloc_ref };
@@ -32,10 +30,11 @@ template<typename Allocator> static void allocate_single_size(Allocator const& a
 }
 
 static void benchmark_bump_single_size(benchmark::State& state) {
-    BumpAllocator<int> alloc {s_bump_allocator_storage};
+    Stf::BumpAllocator<std::byte> storage {};
+    Stf::BumpAllocator<int> alloc { storage };
     for (auto _ : state) {
+        storage.m_pool = s_bump_allocator_container;
         allocate_single_size(alloc);
-        s_bump_allocator_storage.reset();
     }
 }
 BENCHMARK(benchmark_bump_single_size);
@@ -65,18 +64,19 @@ template<typename Allocator> static void allocate_mixed_sizes(Allocator const& a
         const auto sz = std::min(dist(s_random_generator), left_to_consume);
         left_to_consume -= sz;
 
-        pointers[i] = {alloc.allocate(sz), sz};
+        pointers[i] = { alloc.allocate(sz), sz };
     }
 
-    for (auto const&[p, i] : pointers)
+    for (auto const& [p, i] : pointers)
         alloc.deallocate(p, i);
 }
 
 static void benchmark_bump_mixed_size(benchmark::State& state) {
-    BumpAllocator<int> alloc {s_bump_allocator_storage};
+    Stf::BumpAllocator<std::byte> storage {};
+    Stf::BumpAllocator<int> alloc { storage };
     for (auto _ : state) {
+        storage.m_pool = s_bump_allocator_container;
         allocate_mixed_sizes(alloc);
-        s_bump_allocator_storage.reset();
     }
 }
 BENCHMARK(benchmark_bump_mixed_size);

@@ -1,53 +1,51 @@
 #pragma once
 
 #include <memory>
+#include <span>
 
 namespace Stf {
 
-template<typename Container> struct BumpAllocatorStorage {
-    BumpAllocatorStorage(Container& container)
-        :m_container(container) { reset(true); }
+template<typename T> struct BumpAllocator;
+
+template<> struct BumpAllocator<std::byte> {
+    using pointer = std::byte*;
+    using const_pointer = const std::byte*;
+    using void_pointer = void*;
+    using const_void_pointer = const void*;
+    using value_type = std::byte;
+    using size_type = size_t;
+    using difference_type = ptrdiff_t;
+
+    std::span<std::byte> m_pool;
+
+    mutable std::mutex m_mutex {};
+    size_t m_allocated = 0;
+    size_t m_discarded = 0;
 
     template<typename T> [[nodiscard]] std::byte* allocate(size_t n) noexcept {
         const auto req_size = sizeof(T) * n;
 
-        void* candidate_ptr = static_cast<void*>(m_p);
-        if (!std::align(alignof(T), req_size, candidate_ptr, m_remaining))
+        void* candidate_ptr = static_cast<void*>(m_pool.data());
+        size_t remaining = m_pool.size();
+        if (!std::align(alignof(T), req_size, candidate_ptr, remaining))
             return nullptr;
+        const auto discarded = m_pool.size() - remaining;
+        m_discarded += discarded;
+        m_allocated += req_size;
+
+        remaining -= req_size;
+
+        m_pool = { m_pool.data() + discarded + req_size, remaining };
 
         std::byte* ret = reinterpret_cast<std::byte*>(candidate_ptr);
-        m_remaining -= req_size;
-
-        m_allocated += req_size;
-        m_discarded += std::distance(m_p, ret);
-
-        m_p = ret + req_size;
 
         return ret;
     }
 
-    void reset(bool reset_stats = false) {
-        m_p = m_container.data();
-        m_remaining = m_container.size();
-
-        if (reset_stats) {
-            m_allocated = 0;
-            m_discarded = 0;
-        }
-    }
-
-private:
-    Container& m_container;
-
-    std::byte* m_p = nullptr;
-    size_t m_remaining = 0;
-
-    // statistics
-    size_t m_allocated = 0;
-    size_t m_discarded = 0;
+    void deallocate(const std::byte*, size_t) { }
 };
 
-template<typename T, typename Container> struct BumpAllocator {
+template<typename T> struct BumpAllocator {
     using pointer = T*;
     using const_pointer = const T*;
     using void_pointer = void*;
@@ -56,10 +54,9 @@ template<typename T, typename Container> struct BumpAllocator {
     using size_type = size_t;
     using difference_type = ptrdiff_t;
 
-    template<typename U> struct rebind { using other = BumpAllocator<U, Container>; };
+    template<typename U> struct rebind { using other = BumpAllocator<U>; };
 
-    BumpAllocator(BumpAllocatorStorage<Container>& storage) noexcept
-        : m_storage(storage) { }
+    BumpAllocator<std::byte>& m_storage;
 
     [[nodiscard]] T* allocate(size_t n)
         requires(std::is_trivially_destructible_v<T>)
@@ -68,9 +65,6 @@ template<typename T, typename Container> struct BumpAllocator {
     }
 
     void deallocate(const T*, size_t) { }
-
-private:
-    BumpAllocatorStorage<Container>& m_storage;
 };
 
 // template<typename T, size_t N>

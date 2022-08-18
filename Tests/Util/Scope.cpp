@@ -15,7 +15,7 @@ TEST(Scope, Scope) {
     {
         auto exit_guard = Stf::ScopeGuard(Stf::GuardType::ScopeExit, [&disarmed_exit_guard_activated] { disarmed_exit_guard_activated = true; });
 
-        exit_guard.disarm();
+        exit_guard.release();
     }
 
     try {
@@ -28,7 +28,7 @@ TEST(Scope, Scope) {
     try {
         ([&disarmed_fail_guard_activated] {
             auto fail_guard = Stf::ScopeGuard(Stf::GuardType::ScopeExit, [&disarmed_fail_guard_activated] { disarmed_fail_guard_activated = true; });
-            fail_guard.disarm();
+            fail_guard.release();
             throw std::runtime_error("aeiou");
         })();
     } catch (...) { }

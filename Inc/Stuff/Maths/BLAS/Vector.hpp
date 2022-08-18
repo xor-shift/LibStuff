@@ -16,6 +16,12 @@ template<typename T, size_t N> struct Vector {
     constexpr T operator[](size_t i) const { return data[i]; }
 
     constexpr T& operator[](size_t i) { return data[i]; }
+
+    template<typename U> constexpr operator Vector<U, N>() const {
+        Vector<U, N> vec;
+        std::copy(data, data + N, vec.data);
+        return vec;
+    }
 };
 
 template<typename T, size_t N> struct RefVector {
@@ -183,6 +189,14 @@ template<Concepts::VectorExpression E> constexpr auto normalized(E const& e) {
 template<Concepts::VectorExpression E> constexpr auto abs(E const& e) {
     auto op = [](typename E::value_type v) { return Stf::abs(v); };
     return Detail::VectorMapExpression<E, decltype(op)> { e, op };
+}
+
+template<Concepts::VectorExpression E> constexpr auto min_elem(E const& e) {
+    return fold(e, [](auto lhs, auto rhs) { return std::min(lhs, rhs); });
+}
+
+template<Concepts::VectorExpression E> constexpr auto max_elem(E const& e) {
+    return fold(e, [](auto lhs, auto rhs) { return std::max(lhs, rhs); });
 }
 
 template<Concepts::VectorExpression E0, Concepts::VectorExpression E1>

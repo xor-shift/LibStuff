@@ -2,6 +2,7 @@
 
 #include <exception>
 #include <functional>
+#include <optional>
 
 namespace Stf {
 
@@ -14,17 +15,17 @@ template<typename Func> struct ScopeGuard {
     ScopeGuard(ScopeGuard const&) = delete;
 
     ScopeGuard(ScopeGuard&& other)
-        :m_type(other.type)
-        ,m_func(std::move(other.m_func)) {
-        other.m_armed = false;
+        :m_type(other.type) {
+        using std::swap;
+        swap(other.m_func, m_func);
     }
 
     ScopeGuard(GuardType type, Func&& f = {})
         : m_type(type)
         , m_func(std::forward<Func>(f)) { }
 
-    ~ScopeGuard() noexcept(noexcept(std::invoke(m_func))) {
-        if (!m_armed)
+    ~ScopeGuard() noexcept(noexcept(std::invoke(std::declval<Func>()))) {
+        if (!armed())
             return;
 
         GuardType execution_type;
@@ -37,18 +38,16 @@ template<typename Func> struct ScopeGuard {
         if (execution_type == GuardType::ScopeExit && m_type == GuardType::ScopeFail)
             return;
 
-        std::invoke(m_func);
+        std::invoke(*m_func);
     }
 
-    constexpr void disarm() { m_armed = false; }
-    constexpr void arm() { m_armed = true; }
-    constexpr bool armed() const { return m_armed; }
+    constexpr void release() { m_func = std::nullopt; }
+    constexpr bool armed() const { return (bool)m_func; }
     constexpr operator bool() const { return armed(); }
 
 private:
-    bool m_armed = true;
+    std::optional<Func> m_func{std::nullopt};
     GuardType m_type;
-    Func m_func;
 };
 
 }

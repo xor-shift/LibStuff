@@ -99,6 +99,10 @@ template<typename T, size_t R, size_t C> struct Matrix {
         };
     }
 
+    static constexpr Matrix look_at(Vector<T, 3> from, Vector<T, 3> at)
+        requires(R == 4) && (C == 4)
+    { }
+
     static constexpr Matrix identity()
         requires(R == C)
     {

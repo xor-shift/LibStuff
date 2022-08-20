@@ -30,13 +30,13 @@ struct NewImage {
     constexpr void create(Vector<size_t, 2> dimensions) {
         destroy();
         m_dimensions = dimensions;
-        m_data = m_allocator.allocate(size());
+        m_data = m_allocator.allocate(pixel_count());
     }
 
     /// Resets the image
     constexpr void destroy() noexcept {
         if (m_data != nullptr) {
-            m_allocator.deallocate(m_data, size());
+            m_allocator.deallocate(m_data, pixel_count());
             m_dimensions = { 0, 0 };
         }
     }

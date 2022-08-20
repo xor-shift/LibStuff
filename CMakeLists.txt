@@ -71,7 +71,9 @@ if (LibStuffCompileBenchmarks)
             Benchmarks/main.cpp
 
             Benchmarks/Gfx/Util/Alloc.cpp
-            Benchmarks/Gfx/Image/QoI.cpp
+            #Benchmarks/Gfx/Image/QoI.cpp
+
+            Benchmarks/Maths/Random.cpp
             )
 
     target_link_libraries(${PROJECT_NAME}_benchmarks

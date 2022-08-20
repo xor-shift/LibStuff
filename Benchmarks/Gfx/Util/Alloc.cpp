@@ -25,6 +25,8 @@ template<typename Allocator> static void allocate_single_size(Allocator const& a
     for (size_t i = 0; i < block_count; i++)
         pointers[i] = alloc.allocate(1);
 
+    benchmark::DoNotOptimize(pointers);
+
     for (auto* p : pointers)
         alloc.deallocate(p, 1);
 }
@@ -66,6 +68,8 @@ template<typename Allocator> static void allocate_mixed_sizes(Allocator const& a
 
         pointers[i] = { alloc.allocate(sz), sz };
     }
+
+    benchmark::DoNotOptimize(pointers);
 
     for (auto const& [p, i] : pointers)
         alloc.deallocate(p, i);

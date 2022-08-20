@@ -174,7 +174,11 @@ template<Concepts::VectorExpression E0, Concepts::VectorExpression E1> constexpr
 
 template<typename Op, Concepts::VectorExpression E> constexpr Detail::VectorMapExpression<E, Op> map(E const& e, Op op = {}) { return { e, op }; }
 
-template<Concepts::VectorExpression E> constexpr auto magnitude(E const& e) { return fold(e, std::plus<> {}); }
+template<Concepts::VectorExpression E> constexpr auto magnitude_squared(E const& e) {
+    return fold(map(e, [](auto v) { return v * v; }), std::plus<> {});
+}
+
+template<Concepts::VectorExpression E> constexpr auto magnitude(E const& e) { return std::sqrt(magnitude_squared(e)); }
 
 template<Concepts::VectorExpression E> constexpr auto normalized(E const& e) {
     auto decayed = vector(e);

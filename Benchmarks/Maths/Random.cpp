@@ -2,82 +2,41 @@
 
 #include <Stuff/Maths/Random.hpp>
 
-static void normal_bm(benchmark::State& state) {
+template<typename Sampler> static void common(benchmark::State& state, Sampler&& sampler) {
     for (auto _ : state) {
-        const auto sample = Stf::RNG::Detail::norm_impl_bm<float>();
+        const auto sample = std::invoke(sampler);
         benchmark::DoNotOptimize(sample);
     }
 }
-BENCHMARK(normal_bm);
 
-static void normal_mp(benchmark::State& state) {
-    for (auto _ : state) {
-        const auto sample = Stf::RNG::Detail::norm_impl_mp<float>();
-        benchmark::DoNotOptimize(sample);
-    }
-}
-BENCHMARK(normal_mp);
+#define MAKE_BENCH(_name, _sampler)                                                \
+    static void _name(benchmark::State& state) { return common(state, _sampler); } \
+    BENCHMARK(_name)
 
-static void normal_std(benchmark::State& state) {
-    for (auto _ : state) {
-        const auto sample = Stf::RNG::Detail::norm_impl_std<float>();
-        benchmark::DoNotOptimize(sample);
-    }
-}
-BENCHMARK(normal_std);
+#define MAKE_GENERAL_BENCH(_category, _name, _type, _struct, _sampler) \
+    MAKE_BENCH(_category##_1##_gnrl_##_name, (_struct<_type, 1>::_sampler));     \
+    MAKE_BENCH(_category##_2##_gnrl_##_name, (_struct<_type, 2>::_sampler));     \
+    MAKE_BENCH(_category##_3##_gnrl_##_name, (_struct<_type, 3>::_sampler));     \
+    MAKE_BENCH(_category##_4##_gnrl_##_name, (_struct<_type, 4>::_sampler))
 
-static void sphere_0_snorm(benchmark::State& state) {
-    for (auto _ : state) {
-        const auto sample = Stf::RNG::Detail::SphereSamplers<float, 0>::snorm_range();
-        benchmark::DoNotOptimize(sample);
-    }
-}
-BENCHMARK(sphere_0_snorm);
+MAKE_BENCH(normal_bm, Stf::RNG::Detail::norm_impl_bm<float>);
+MAKE_BENCH(normal_mp, Stf::RNG::Detail::norm_impl_mp<float>);
+MAKE_BENCH(normal_std, Stf::RNG::Detail::norm_impl_std<float>);
 
-static void sphere_1_polar(benchmark::State& state) {
-    for (auto _ : state) {
-        const auto sample = Stf::RNG::Detail::SphereSamplers<float, 1>::polar();
-        benchmark::DoNotOptimize(sample);
-    }
-}
-BENCHMARK(sphere_1_polar);
+MAKE_BENCH(sphere_1_spec_snorm, (Stf::RNG::Detail::SphereSamplers<float, 1>::snorm_range));
+MAKE_BENCH(sphere_2_spec_polar, (Stf::RNG::Detail::SphereSamplers<float, 2>::polar));
+MAKE_BENCH(sphere_2_spec_rejection, (Stf::RNG::Detail::SphereSamplers<float, 2>::rejection));
+MAKE_BENCH(sphere_2_spec_gaussian, (Stf::RNG::Detail::SphereSamplers<float, 2>::gaussian));
+MAKE_BENCH(sphere_3_spec_rejection_marsaglia, (Stf::RNG::Detail::SphereSamplers<float, 3>::rejection_marsaglia));
+MAKE_BENCH(sphere_3_spec_rejection_cook, (Stf::RNG::Detail::SphereSamplers<float, 3>::rejection_cook));
+MAKE_BENCH(sphere_3_spec_polar, (Stf::RNG::Detail::SphereSamplers<float, 3>::polar));
+MAKE_BENCH(sphere_3_spec_polar_noinverse, (Stf::RNG::Detail::SphereSamplers<float, 3>::polar_noinverse));
 
-static void sphere_1_rejection(benchmark::State& state) {
-    for (auto _ : state) {
-        const auto sample = Stf::RNG::Detail::SphereSamplers<float, 1>::rejection();
-        benchmark::DoNotOptimize(sample);
-    }
-}
-BENCHMARK(sphere_1_rejection);
+MAKE_GENERAL_BENCH(sphere, gaussian, float, Stf::RNG::Detail::SphereSamplers, general_gaussian);
 
-static void sphere_1_gaussian(benchmark::State& state) {
-    for (auto _ : state) {
-        const auto sample = Stf::RNG::Detail::SphereSamplers<float, 1>::gaussian();
-        benchmark::DoNotOptimize(sample);
-    }
-}
-BENCHMARK(sphere_1_gaussian);
+MAKE_BENCH(ball_1_spec_snorm, (Stf::RNG::Detail::BallSamplers<float, 1>::snorm));
+MAKE_BENCH(ball_2_spec_rejection, (Stf::RNG::Detail::BallSamplers<float, 2>::rejection));
+MAKE_BENCH(ball_2_spec_concentric, (Stf::RNG::Detail::BallSamplers<float, 2>::concentric));
 
-static void ball_1_snorm(benchmark::State& state) {
-    for (auto _ : state) {
-        const auto sample = Stf::RNG::Detail::BallSamplers<float, 1>::snorm();
-        benchmark::DoNotOptimize(sample);
-    }
-}
-BENCHMARK(ball_1_snorm);
-
-static void ball_2_rejection(benchmark::State& state) {
-    for (auto _ : state) {
-        const auto sample = Stf::RNG::Detail::BallSamplers<float, 2>::rejection();
-        benchmark::DoNotOptimize(sample);
-    }
-}
-BENCHMARK(ball_2_rejection);
-
-static void ball_2_polar_radial(benchmark::State& state) {
-    for (auto _ : state) {
-        const auto sample = Stf::RNG::Detail::BallSamplers<float, 2>::polar_radial();
-        benchmark::DoNotOptimize(sample);
-    }
-}
-BENCHMARK(ball_2_polar_radial);
+MAKE_GENERAL_BENCH(ball, polar_radial, float, Stf::RNG::Detail::BallSamplers, polar_radial);
+MAKE_GENERAL_BENCH(ball, rejection, float, Stf::RNG::Detail::BallSamplers, general_rejection);

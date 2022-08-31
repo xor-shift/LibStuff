@@ -11,7 +11,68 @@ option(LibStuffCompileExamples "" ON)
 set(${CMAKE_CXX_FLAGS} "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined")
 set(${CMAKE_EXE_LINKER_FLAGS} "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address -fsanitize=undefined")
 
-add_library(${PROJECT_NAME})
+add_library(${PROJECT_NAME}
+        Inc/Stuff/Files/Format.hpp
+
+        Inc/Stuff/Graphics/Image/QoI.ipp
+        Inc/Stuff/Graphics/Image.hpp
+        Inc/Stuff/Graphics/Traits.hpp
+
+        Inc/Stuff/IO/ACS.hpp
+        Inc/Stuff/IO/Delim.hpp
+        Inc/Stuff/IO/GPS.hpp
+        Inc/Stuff/IO/Nextion.hpp
+        Inc/Stuff/IO/NTC.hpp
+        Inc/Stuff/IO/Packetman.hpp
+        Inc/Stuff/IO/SoftUART.hpp
+
+        Inc/Stuff/Maths/BLAS/Concepts.hpp
+        Inc/Stuff/Maths/BLAS/Matrix.hpp
+        Inc/Stuff/Maths/BLAS/MatVec.hpp
+        Inc/Stuff/Maths/BLAS/Quat.hpp
+        Inc/Stuff/Maths/BLAS/Util.hpp
+        Inc/Stuff/Maths/BLAS/Vector.hpp
+
+        Inc/Stuff/Maths/Scalar/Basic.hpp
+        Inc/Stuff/Maths/Scalar/Classification.hpp
+        Inc/Stuff/Maths/Scalar/Exponential.hpp
+        Inc/Stuff/Maths/Scalar/FloatUtils.hpp
+        Inc/Stuff/Maths/Scalar/Interpolation.hpp
+        Inc/Stuff/Maths/Scalar/Manipulation.hpp
+        Inc/Stuff/Maths/Scalar/Power.hpp
+        Inc/Stuff/Maths/Scalar/Trig.hpp
+
+        Inc/Stuff/Maths/Bit.hpp
+        Inc/Stuff/Maths/CRC.hpp
+        Inc/Stuff/Maths/Fmt.hpp
+        Inc/Stuff/Maths/Random.hpp
+        Inc/Stuff/Maths/Scalar.hpp
+
+        Inc/Stuff/Refl/ReflNew.hpp
+        Inc/Stuff/Refl/Serde.hpp
+
+        Inc/Stuff/Serde/Adapters/BEncode.hpp
+        Inc/Stuff/Serde/Adapters/JSON.hpp
+        Inc/Stuff/Serde/Refl/Refl.hpp
+        Inc/Stuff/Serde/BasicSerializers.hpp
+        Inc/Stuff/Serde/Concepts.hpp
+        Inc/Stuff/Serde/Serde.hpp
+
+        Inc/Stuff/Util/Hacks/Concepts.hpp
+        Inc/Stuff/Util/Hacks/Coroutines.hpp
+        Inc/Stuff/Util/Hacks/Expected.hpp
+        Inc/Stuff/Util/Hacks/Try.hpp
+        Inc/Stuff/Util/Alloc.hpp
+        Inc/Stuff/Util/Conv.hpp
+        Inc/Stuff/Util/DummyIterator.hpp
+        Inc/Stuff/Util/Hash.hpp
+        Inc/Stuff/Util/Scope.hpp
+        Inc/Stuff/Util/SpinLock.hpp
+        Inc/Stuff/Util/Timer.hpp
+        Inc/Stuff/Util/Tuple.hpp
+        Inc/Stuff/Util/UTF8.hpp
+        Inc/Stuff/Util/Visitor.hpp
+        )
 
 target_include_directories(${PROJECT_NAME} PUBLIC Inc)
 

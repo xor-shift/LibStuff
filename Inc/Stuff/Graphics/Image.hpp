@@ -6,7 +6,7 @@
 #include <memory>
 #include <span>
 
-#include <Stuff/Maths/Maths.hpp>
+#include <Stuff/Maths/BLAS/Vector.hpp>
 
 #include "./Traits.hpp"
 

@@ -41,8 +41,8 @@ namespace Detail {
 
 /// Box–Muller transform
 template<typename T> inline Vector<T, 2> norm_impl_bm() {
-    const auto y = Detail::range<T>(0, true, 1, true);
-    const auto x = Detail::range<T>(0, true, 1, true);
+    const auto y = range<T>(0, false, 1, false);
+    const auto x = range<T>(0, false, 1, false);
     const auto r = std::sqrt(-2 * std::log(x));
     const auto theta = 2 * std::numbers::pi_v<T> * y;
     return { r * std::cos(theta), r * std::sin(theta) };
@@ -50,8 +50,8 @@ template<typename T> inline Vector<T, 2> norm_impl_bm() {
 
 /// Marsaglia polar method (Box–Muller but good)
 template<typename T> inline Vector<T, 2> norm_impl_mp() {
-    const auto x = Detail::range<T>(-1, true, 1, true);
-    const auto y = Detail::range<T>(-1, true, 1, true);
+    const auto x = range<T>(-1, true, 1, true);
+    const auto y = range<T>(-1, true, 1, true);
     const auto s = x * x + y * y;
     if (s >= 1 || s == 0)
         return norm_impl_mp<T>();
@@ -110,15 +110,15 @@ template<typename T, size_t N> struct SphereSamplers {
     static inline Vector<T, 2> polar()
         requires(N == 2)
     {
-        const auto theta = Detail::range<T>(0, true, std::numbers::pi_v<T> * 2, false);
+        const auto theta = range<T>(0, true, std::numbers::pi_v<T> * 2, false);
         return { std::cos(theta), std::sin(theta) };
     }
 
     static inline Vector<T, 2> rejection()
         requires(N == 2)
     {
-        const auto u = Detail::range<T>(-1, true, 1, true);
-        const auto v = Detail::range<T>(-1, true, 1, true);
+        const auto u = range<T>(-1, true, 1, true);
+        const auto v = range<T>(-1, true, 1, true);
 
         const auto d = u * u + v * v;
 
@@ -137,8 +137,8 @@ template<typename T, size_t N> struct SphereSamplers {
     static inline Vector<T, 3> rejection_marsaglia()
         requires(N == 3)
     {
-        const auto u = Detail::range<T>(-1, true, 1, true);
-        const auto v = Detail::range<T>(-1, true, 1, true);
+        const auto u = range<T>(-1, true, 1, true);
+        const auto v = range<T>(-1, true, 1, true);
 
         const auto d = u * u + v * v;
 
@@ -155,10 +155,10 @@ template<typename T, size_t N> struct SphereSamplers {
     static inline Vector<T, 3> rejection_cook()
         requires(N == 3)
     {
-        const auto x_0 = Detail::range<T>(-1, false, 1, false);
-        const auto x_1 = Detail::range<T>(-1, false, 1, false);
-        const auto x_2 = Detail::range<T>(-1, false, 1, false);
-        const auto x_3 = Detail::range<T>(-1, false, 1, false);
+        const auto x_0 = range<T>(-1, false, 1, false);
+        const auto x_1 = range<T>(-1, false, 1, false);
+        const auto x_2 = range<T>(-1, false, 1, false);
+        const auto x_3 = range<T>(-1, false, 1, false);
 
         const auto x2_0 = x_0 * x_0;
         const auto x2_1 = x_1 * x_1;
@@ -246,7 +246,7 @@ template<typename T, size_t N> struct BallSamplers {
             root_fn = [](T v) { return std::pow(v, static_cast<T>(1) / static_cast<T>(N)); };
         }
 
-        auto r = root_fn(Detail::range<T>(0, true, 1, false));
+        auto r = root_fn(range<T>(0, true, 1, false));
         auto sphere_sample = n_sphere<T, N>();
         return Stf::vector(sphere_sample * r);
     }
@@ -254,7 +254,7 @@ template<typename T, size_t N> struct BallSamplers {
     static inline Vector<T, N> general_rejection() {
         Vector<T, N> vec;
         for (auto i = 0uz; i < N; i++)
-            vec.data[i] = Detail::range<T>(-1, true, 1, false);
+            vec.data[i] = range<T>(-1, true, 1, false);
         if (magnitude_squared(vec) >= 1)
             return general_rejection();
         return vec;
@@ -263,14 +263,14 @@ template<typename T, size_t N> struct BallSamplers {
     static inline Vector<T, 1> snorm()
         requires(N == 1)
     {
-        return { Detail::range<T>(-1, true, 1, false) };
+        return { range<T>(-1, true, 1, false) };
     }
 
     static inline Vector<T, 2> rejection()
         requires(N == 2)
     {
-        const auto x = Detail::range<T>(-1, true, 1, false);
-        const auto y = Detail::range<T>(-1, true, 1, false);
+        const auto x = range<T>(-1, true, 1, false);
+        const auto y = range<T>(-1, true, 1, false);
         if (x * x + y * y >= 1)
             return rejection();
         return { x, y };
@@ -279,8 +279,8 @@ template<typename T, size_t N> struct BallSamplers {
     static inline Vector<T, 2> concentric()
         requires(N == 2)
     {
-        const auto u = Detail::range<T>(-1, true, 1, false);
-        const auto v = Detail::range<T>(-1, true, 1, false);
+        const auto u = range<T>(-1, true, 1, false);
+        const auto v = range<T>(-1, true, 1, false);
         if (u == 0 && v == 0)
             return { 0, 0 };
 
@@ -307,5 +307,11 @@ inline Vector<T, N> n_ball() {
 
     return Detail::BallSamplers<T, N>::polar_radial();
 }
+
+}
+
+namespace Stf::RNGNew {
+
+struct RNGContext {};
 
 }

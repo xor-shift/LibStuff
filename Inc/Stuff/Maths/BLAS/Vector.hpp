@@ -24,21 +24,12 @@ template<typename T, size_t N> struct Vector {
     }
 };
 
-template<typename T, size_t N> struct RefVector {
-    T* data[N];
-
-    using value_type = T;
-    constexpr static size_t vector_size = N;
-
-    constexpr T const& operator[](size_t i) const { return *data[i]; }
-};
-
 template<typename T, typename... Ts> constexpr Vector<T, 1 + sizeof...(Ts)> vector(const T v, Ts... vs) { return { static_cast<T>(v), static_cast<T>(vs)... }; }
 
 template<Concepts::VectorExpression E> constexpr auto vector(E const& e) {
     Vector<typename E::value_type, E::vector_size> ret {};
 
-    for (size_t i = 0; i < E::vector_size; i++)
+    for (auto i = 0uz; i < E::vector_size; i++)
         ret[i] = e[i];
 
     return ret;
@@ -49,15 +40,24 @@ template<Concepts::VectorExpression E> constexpr auto vector(E const& e) {
 // Expression structs
 namespace Stf::Detail {
 
+template<typename T, Concepts::VectorExpression E> struct CastExpression {
+    using value_type = T;
+    static constexpr size_t vector_size = E::vector_size;
+
+    E e;
+
+    constexpr value_type operator[](size_t i) const { return static_cast<T>(e[i]); }
+};
+
 template<typename Oper, Concepts::VectorExpression... Es>
-    requires VariadicVectorHelper<Es...>::is_compatible
+    requires(vectors_are_compatible<Es...>())
 struct ElementwiseBinaryVectorOperation {
     using Helper = VariadicVectorHelper<Es...>;
     using value_type = std::invoke_result_t<Oper, typename Helper::value_type, typename Helper::value_type>;
     static constexpr size_t vector_size = Helper::vector_size;
 
-    const Oper op;
-    const std::tuple<Es...> expressions;
+    Oper op;
+    std::tuple<Es...> expressions;
 
     constexpr value_type operator[](size_t i) const {
         return fold(i, expressions, op, [](auto const& expr, size_t idx) { return expr[idx]; });
@@ -68,22 +68,21 @@ template<Concepts::VectorExpression E, typename Op> struct VectorMapExpression {
     using value_type = std::invoke_result_t<Op, typename E::value_type>;
     static constexpr size_t vector_size = E::vector_size;
 
-    const E e;
-    const Op op;
+    E e;
+    Op op;
 
     constexpr value_type operator[](size_t i) const { return std::invoke(op, e[i]); }
 };
 
-// TODO: remove this class and replace with ElementwiseUnaryVectorOperation
 template<Concepts::VectorExpression E, typename Scalar, typename Op>
     requires std::convertible_to<Scalar, typename E::value_type>
 struct VectorScalarExpression {
     using value_type = typename E::value_type;
     static constexpr size_t vector_size = E::vector_size;
 
-    const E e;
-    const Scalar s;
-    const Op op;
+    E e;
+    Scalar s;
+    Op op;
 
     constexpr value_type operator[](size_t i) const { return std::invoke(op, e[i], static_cast<typename E::value_type>(s)); }
 };
@@ -93,11 +92,17 @@ struct RemFNObject {
     template<std::integral T> constexpr T operator()(T lhs, T rhs) const { return lhs % rhs; }
 };
 
+struct NegationFNObject {
+    template<typename T> constexpr T operator()(T v) const { return -v; }
+};
+
 template<Concepts::VectorExpression E> using VectorScalarAdditionExpression = VectorScalarExpression<E, typename E::value_type, std::plus<>>;
 template<Concepts::VectorExpression E> using VectorScalarMultiplicationExpression = VectorScalarExpression<E, typename E::value_type, std::multiplies<>>;
 template<Concepts::VectorExpression E> using VectorScalarSubtractionExpression = VectorScalarExpression<E, typename E::value_type, std::minus<>>;
 template<Concepts::VectorExpression E> using VectorScalarDivisionExpression = VectorScalarExpression<E, typename E::value_type, std::divides<>>;
+
 template<Concepts::VectorExpression E> using VectorScalarRemainderExpression = VectorScalarExpression<E, typename E::value_type, RemFNObject>;
+template<Concepts::VectorExpression E> using VectorNegationExpression = VectorMapExpression<E, NegationFNObject>;
 
 template<Concepts::VectorExpression... Es> using VectorAdditionExpression = ElementwiseBinaryVectorOperation<std::plus<>, Es...>;
 template<Concepts::VectorExpression... Es> using VectorMultiplicationExpression = ElementwiseBinaryVectorOperation<std::multiplies<>, Es...>;
@@ -108,18 +113,24 @@ template<Concepts::VectorExpression... Es> using VectorDivisionExpression = Elem
 
 namespace Stf {
 
-#define BASIC_SCALAR_FACTORY(EXPR_NAME, EXPR_SYM)                                                                                         \
-    template<Concepts::VectorExpression E, typename T>                                                                                    \
-        requires std::convertible_to<T, typename E::value_type>                                                                           \
-    constexpr Detail::VectorScalar##EXPR_NAME##Expression<E> operator EXPR_SYM(E const& e, T v) {                                         \
-        const auto v_conv = static_cast<typename E::value_type>(v);                                                                       \
-        return { e, v_conv, {} };                                                                                                         \
-    }                                                                                                                                     \
-                                                                                                                                          \
-    template<Concepts::VectorExpression E, typename T>                                                                                    \
-        requires std::convertible_to<T, typename E::value_type>                                                                           \
-    constexpr Detail::VectorScalar##EXPR_NAME##Expression<E> operator EXPR_SYM(Detail::VectorScalar##EXPR_NAME##Expression<E>&& e, T v) { \
-        return { e.e, e.s + static_cast<typename T::value_Type>(v), {} };                                                                 \
+template<typename T, Concepts::VectorExpression E> constexpr Detail::CastExpression<T, E> vector(E const& e) { return { e }; };
+
+#define BASIC_SCALAR_FACTORY(EXPR_NAME, EXPR_SYM)                                                                                                    \
+    template<Concepts::VectorExpression E, typename T>                                                                                               \
+        requires std::convertible_to<T, typename E::value_type>                                                                                      \
+    constexpr Detail::VectorScalar##EXPR_NAME##Expression<E> operator EXPR_SYM(E const& e, T v) {                                                    \
+        const auto v_conv = static_cast<typename E::value_type>(v);                                                                                  \
+        return { e, v_conv, {} };                                                                                                                    \
+    }                                                                                                                                                \
+                                                                                                                                                     \
+    template<Concepts::VectorExpression E, typename T>                                                                                               \
+        requires std::convertible_to<T, typename E::value_type>                                                                                      \
+    constexpr Detail::VectorScalar##EXPR_NAME##Expression<E> operator EXPR_SYM(Detail::VectorScalar##EXPR_NAME##Expression<E>&& e, T v) {            \
+        return { e.e, e.s + static_cast<typename T::value_Type>(v), {} };                                                                            \
+    }                                                                                                                                                \
+                                                                                                                                                     \
+    template<Concepts::VectorExpression E, typename T> constexpr Detail::VectorScalar##EXPR_NAME##Expression<E> operator EXPR_SYM(T v, E const& e) { \
+        return operator EXPR_SYM(e, v);                                                                                                              \
     }
 
 #define BASIC_BINARY_FACTORY(EXPR_NAME, EXPR_SYM, EXPR_OP_TYPE)                                                                                 \
@@ -147,24 +158,23 @@ BASIC_BINARY_FACTORY(Division, /, std::divides<>)
 #undef BASIC_SCALAR_FACTORY
 #undef BASIC_BINARY_FACTORY
 
+template<Concepts::VectorExpression E> constexpr Detail::VectorNegationExpression<E> operator-(E const& e) { return { e }; }
+
 template<typename Op, Concepts::VectorExpression E> constexpr auto fold(E const& e, Op op = {}) {
     auto v = e[0];
 
     if constexpr (E::vector_size == 1)
         return v;
 
-    for (size_t i = 1; i < E::vector_size; i++)
+    for (auto i = 1uz; i < E::vector_size; i++)
         v = op(v, e[i]);
 
     return v;
 }
 
-/// @remarks
-/// It is recommended vectors instead of expressions are passed into this function.
-template<Concepts::VectorExpression E0, Concepts::VectorExpression E1> constexpr bool operator==(E0 const& e_0, E1 const& e_1) {
-    if constexpr (E0::vector_size != E1::vector_size)
-        return false;
-
+template<Concepts::VectorExpression E0, Concepts::VectorExpression E1>
+    requires(E0::vector_size == E1::vector_size)
+constexpr bool operator==(E0 const& e_0, E1 const& e_1) {
     for (auto i = 0uz; i < E0::vector_size; i++)
         if (e_0[i] != e_1[i])
             return false;
@@ -217,6 +227,31 @@ constexpr Vector<typename E0::value_type, 3> cross(E0 const& e_0, E1 const& e_1)
         e_0[2] * e_1[0] - e_0[0] * e_1[2],
         e_0[0] * e_1[1] - e_0[1] * e_1[0],
     };
+}
+
+}
+
+namespace std {
+
+template<typename> struct tuple_size;
+template<size_t, typename> struct tuple_element;
+
+template<::Stf::Concepts::VectorExpression E> struct tuple_size<E> : public integral_constant<size_t, E::vector_size> { };
+
+template<size_t I, ::Stf::Concepts::VectorExpression E> struct tuple_element<I, E> { using type = decay_t<typename E::value_type>; };
+
+}
+
+namespace Stf {
+
+template<size_t I, typename T, size_t N> constexpr T& get(Stf::Vector<T, N>& e) noexcept { return e.data[I]; }
+
+template<size_t I, typename T, size_t N> constexpr T&& get(Stf::Vector<T, N>&& e) noexcept { return std::move(e.data[I]); }
+
+template<size_t I, ::Stf::Concepts::VectorExpression E>
+    requires(I < E::vector_size)
+constexpr auto get(E const& e) noexcept {
+    return e[I];
 }
 
 }

@@ -42,6 +42,9 @@ template<Concepts::VectorExpression E0, Concepts::VectorExpression... Es> struct
         []<Concepts::VectorExpression U, Concepts::VectorExpression V>() { return U::vector_size == V::vector_size; });
 };
 
+template<Concepts::VectorExpression... Es>
+constexpr bool vectors_are_compatible() { return VariadicVectorHelper<Es...>::is_compatible; }
+
 template<Concepts::MatrixExpression E0, Concepts::MatrixExpression... Es> struct VariadicMatrixHelper {
     using value_type = typename E0::value_type;
     static constexpr size_t rows = E0::rows;

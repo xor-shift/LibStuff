@@ -77,14 +77,14 @@ template<Concepts::VectorExpression E, typename Op> struct VectorMapExpression {
 template<Concepts::VectorExpression E, typename Scalar, typename Op>
     requires std::convertible_to<Scalar, typename E::value_type>
 struct VectorScalarExpression {
-    using value_type = typename E::value_type;
+    using value_type = std::invoke_result_t<Op, typename E::value_type, Scalar>;
     static constexpr size_t vector_size = E::vector_size;
 
     E e;
     Scalar s;
     Op op;
 
-    constexpr value_type operator[](size_t i) const { return std::invoke(op, e[i], static_cast<typename E::value_type>(s)); }
+    constexpr auto operator[](size_t i) const { return std::invoke(op, e[i], static_cast<typename E::value_type>(s)); }
 };
 
 struct RemFNObject {
@@ -227,6 +227,10 @@ constexpr Vector<typename E0::value_type, 3> cross(E0 const& e_0, E1 const& e_1)
         e_0[2] * e_1[0] - e_0[0] * e_1[2],
         e_0[0] * e_1[1] - e_0[1] * e_1[0],
     };
+}
+
+template<Concepts::VectorExpression E> constexpr auto reciprocal(E const& e) {
+    return map(e, [](typename E::value_type v) -> typename E::value_type { return 1 / v; });
 }
 
 }

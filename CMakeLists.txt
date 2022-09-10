@@ -8,8 +8,10 @@ option(LibStuffCompileTests "" ON)
 option(LibStuffCompileBenchmarks "" ON)
 option(LibStuffCompileExamples "" ON)
 
-set(${CMAKE_CXX_FLAGS} "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined")
-set(${CMAKE_EXE_LINKER_FLAGS} "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address -fsanitize=undefined")
+if (${CMAKE_BUILD_TYPE} STREQUAL "Debug" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address -fsanitize=undefined")
+endif()
 
 add_library(${PROJECT_NAME}
         Inc/Stuff/Files/Format.hpp
@@ -147,7 +149,7 @@ if (LibStuffCompileBenchmarks)
 
         target_link_options(${PROJECT_NAME}_benchmarks PUBLIC
                 -fsanitize=address -fsanitize=undefined)
-    endif()
+    endif ()
 
 endif ()
 

@@ -3,7 +3,8 @@
 #include <cmath>
 #include <random>
 
-#include <Stuff/Maths/Maths.hpp>
+#include <fmt/format.h>
+
 #include <Stuff/Maths/Scalar.hpp>
 #include <Stuff/Util/Tuple.hpp>
 

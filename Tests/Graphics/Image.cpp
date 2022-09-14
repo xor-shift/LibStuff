@@ -84,7 +84,7 @@ struct QoITest {
 
         auto res_redecode_data = decode_and_validate(vec_reencode_qoi.begin(), vec_reencode_qoi.end(), decoded_cksum);
         ASSERT_TRUE(res_redecode_data);
-        auto& img_redecode_data = *res_redecode_data;
+        auto img_redecode_data = std::move(*res_redecode_data);
 
         if (redecode_data != nullptr) {
             std::ofstream ofs(redecode_data, std::ios::binary | std::ios::out);

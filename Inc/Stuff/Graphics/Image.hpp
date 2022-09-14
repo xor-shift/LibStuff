@@ -97,6 +97,7 @@ template<typename Allocator = std::allocator<uint8_t>> struct Image {
         , m_height(other.m_height)
         , m_data(other.m_data) {
         other.m_data = nullptr;
+        other.reset();
     }
 
     constexpr Image(size_t width, size_t height, Allocator const& alloc = Allocator()) noexcept(noexcept(Allocator(alloc)))
@@ -112,7 +113,7 @@ template<typename Allocator = std::allocator<uint8_t>> struct Image {
         fill(fill_color);
     }
 
-    ~Image() noexcept(noexcept(m_allocator.deallocate(m_data, m_width* m_height))) { reset(); }
+    constexpr ~Image() noexcept(noexcept(m_allocator.deallocate(m_data, m_width* m_height))) { reset(); }
 
     constexpr Image& operator=(Image&& other) {
         m_allocator = other.m_allocator;
@@ -122,6 +123,7 @@ template<typename Allocator = std::allocator<uint8_t>> struct Image {
         m_height = other.m_height;
         m_data = other.m_data;
         other.m_data = nullptr;
+        other.reset();
         return *this;
     }
 

@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 
-#include <Stuff/Maths/Maths.hpp>
+#include <Stuff/Maths/Scalar.hpp>
+#include <Stuff/Maths/BLAS/Vector.hpp>
+#include <Stuff/Maths/Fmt.hpp>
 #include <Stuff/Refl/ReflNew.hpp>
 
 TEST(Vector, BasicExpressions) {

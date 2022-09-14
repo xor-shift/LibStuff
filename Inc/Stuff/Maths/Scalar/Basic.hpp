@@ -1,5 +1,7 @@
 #pragma once
 
+#include <limits>
+
 #include "./Classification.hpp"
 
 namespace Stf {
@@ -15,25 +17,58 @@ constexpr T abs(T v) {
     return (v > 0) ? v : -v;
 }
 
-template<std::floating_point T>
-constexpr T fmod(T x, T y);
+template<std::floating_point T> constexpr T fmod(T x, T y);
 
-template<std::floating_point T>
-constexpr T remainder(T x, T y);
+template<std::floating_point T> constexpr T remainder(T x, T y);
 
-template<std::floating_point T>
-constexpr T remquo(T x, T y, int* quo);
+template<std::floating_point T> constexpr T remquo(T x, T y, int* quo);
 
-template<std::floating_point T>
-constexpr T fmax(T x, T y);
+template<std::floating_point T> constexpr T fmax(T x, T y) {
+    if (is_nan(x) && is_nan(y))
+        return std::numeric_limits<T>::quiet_NaN();
 
-template<std::floating_point T>
-constexpr T fmin(T x, T y);
+    if (is_nan(x))
+        return y;
+    if (is_nan(y))
+        return x;
 
-template<std::floating_point T>
-constexpr T trunc(T arg);
+    if (x == 0 && y == 0) {
+        if (!sign_bit(x) || !sign_bit(y))
+            return static_cast<T>(0.f);
+        return static_cast<T>(-0.f);
+    }
 
-//custom ones
+    return x > y ? x : y;
+}
+
+template<std::floating_point T> constexpr T fmin(T x, T y) {
+    if (is_nan(x) && is_nan(y))
+        return std::numeric_limits<T>::quiet_NaN();
+
+    if (is_nan(x))
+        return y;
+    if (is_nan(y))
+        return x;
+
+    if (x == 0 && y == 0) {
+        if (sign_bit(x) || sign_bit(y))
+            return static_cast<T>(-0.f);
+        return static_cast<T>(0.f);
+    }
+
+    return y > x ? x : y;
+}
+
+template<std::floating_point T> constexpr T trunc(T arg);
+
+template<std::floating_point T> constexpr T fdim(T x, T y) {
+    if (is_nan(x) || is_nan(y))
+        return std::numeric_limits<T>::quiet_NaN();
+
+    return fmax(x - y, 0);
+}
+
+// custom ones
 
 template<std::floating_point T> constexpr bool is_close(T v, T u, T error = 0.00001) {
     if (is_inf(v) || is_inf(u))

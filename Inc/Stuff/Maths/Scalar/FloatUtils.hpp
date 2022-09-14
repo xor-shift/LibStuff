@@ -31,7 +31,7 @@ template<> struct FloatParts<float> {
 template<> struct FloatParts<double> {
     using raw_repr = uint64_t;
     static constexpr raw_repr exponent_bits = 11;
-    static constexpr raw_repr max_exponent = 0x3FFull;
+    static constexpr raw_repr max_exponent = 0x7FFull;
     static constexpr raw_repr fraction_bits = 52;
     static constexpr raw_repr max_fraction = 0xFFFFFFFFFFFFFull;
 

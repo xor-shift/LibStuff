@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <random>
 
 #include <Stuff/Maths/Maths.hpp>
 #include <Stuff/Maths/Scalar.hpp>
@@ -64,26 +65,28 @@ TEST(Scalar, Classification) {
 }
 
 template<size_t N, typename Ret, typename... Args>
-using TestVectorArray = std::array<std::tuple<std::string_view, Ret (*)(Args...), Ret (*)(Args...), std::tuple<Args...>, Ret>, N>;
+using TestVectorArray = std::tuple<Ret (*)(Args...), Ret (*)(Args...), std::array<std::tuple<std::string_view, std::tuple<Args...>, Ret>, N>>;
 
-template<size_t N, typename Ret, typename... Args> static void vector_test(TestVectorArray<N, Ret, Args...> const& vec) {
-    for (auto [name, test_fn, reference_fn, test_arguments, reference_val] : vec) {
+template<size_t N, typename Ret, typename... Args> static void vector_test(TestVectorArray<N, Ret, Args...> const& arr) {
+    auto const& [test_fn, reference_fn, vec] = arr;
+    for (auto [name, test_arguments, reference_val] : vec) {
         double lhs = Stf::tuple_call(test_fn, test_arguments);
         double rhs = reference_fn != nullptr ? Stf::tuple_call(reference_fn, test_arguments) : reference_val;
 
         if (!Stf::is_close(lhs, rhs)) {
-            fmt::print("Mathematical function test named '{}' failed.\n", name);
+            fmt::print("N-ary function test named '{}' failed. ({} != {})\n", name, lhs, rhs);
             ASSERT_FLOAT_EQ(lhs, rhs);
         }
     }
 }
 
 TEST(Scalar, Exponential) {
-    TestVectorArray<3, double, double> test_vector { {
-        { "e^0", Stf::exp<double>, std::exp, 0.001, 1 },
-        { "e^1", Stf::exp<double>, std::exp, 1, M_E },
-        { "e^pi", Stf::exp<double>, std::exp, M_PI, 23.140692632779 },
-    } };
+    TestVectorArray<3, double, double> test_vector { Stf::exp<double>, std::exp,
+        { {
+            { "e^0.001", 0.001, 1 },
+            { "e^1", 1, M_E },
+            { "e^pi", M_PI, 23.140692632779 },
+        } } };
 
     vector_test(test_vector);
 }
@@ -101,28 +104,40 @@ TEST(Scalar, FloatUtils) {
 }
 
 TEST(Scalar, Power) {
-    auto pow = [](float x, int y) -> float {
-        return std::pow(x, y);
-    };
+    auto pow = [](float x, int y) -> float { return std::pow(x, y); };
 
-    TestVectorArray<2, float, float, int> test_vector { {
-        { "1.5 ** 2", Stf::pow, pow, {1.5f, 2}, 2.25f },
-        { "1.5 ** -2", Stf::pow, pow, {1.5f, -2}, 1.f/2.25f },
-    } };
+    TestVectorArray<2, float, float, int> test_vector { Stf::pow, pow,
+        { {
+            { "1.5 ** 2", { 1.5f, 2 }, 2.25f },
+            { "1.5 ** -2", { 1.5f, -2 }, 1.f / 2.25f },
+        } } };
 
     vector_test(test_vector);
 }
 
-TEST(Scalar, Approximations) {
-    const auto cos_of_1 = Stf::cos(1.);
-    const auto sin_of_e = Stf::sin(M_E);
-    const auto one_half_to_4 = Stf::pow(0.5f, 4);
+TEST(Scalar, Trig) {
+    const auto pi = std::numbers::pi_v<float>;
 
-    ASSERT_FLOAT_EQ(0.540302305868139, cos_of_1);
-    ASSERT_FLOAT_EQ(std::cos(1.), cos_of_1);
+    TestVectorArray<7, float, float> sin_test_vector { Stf::sin<float>, std::sin,
+        { {
+            { "sin of 0°", 0.f, 0.f },
+            { "sin of 15°", pi / 12.f, (std::sqrt(6.f) - std::sqrt(2.f)) / 4 },
+            { "sin of 30°", pi / 6.f, .5f },
+            { "sin of 45°", pi / 4.f, 1.f / std::sqrt(2.f) },
+            { "sin of 60°", pi / 3.f, std::sqrt(3.f) / 2.f },
+            { "sin of 75°", 5.f * pi / 12.f, (std::sqrt(6.f) + std::sqrt(2.f)) / 4 },
+            { "sin of 90°", pi / 2.f, 1.f },
+        } } };
+    vector_test(sin_test_vector);
 
-    ASSERT_FLOAT_EQ(0.410781290502908, sin_of_e);
-    ASSERT_FLOAT_EQ(std::sin(M_E), sin_of_e);
+    const size_t rounds = 1024;
+    const uint64_t seed = 0xDEADBEEFCAFEBABE;
+    std::mt19937_64 gen(seed);
 
-    ASSERT_FLOAT_EQ(0.0625f, one_half_to_4);
+    std::uniform_real_distribution<float> dist_0_1(0.f, 1.f);
+    std::uniform_real_distribution<float> dist_1_1024(1.f, 1024.f);
+
+    for (auto i = 0zu; i < rounds; i++) {
+
+    }
 }

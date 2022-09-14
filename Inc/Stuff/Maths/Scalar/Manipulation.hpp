@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Stf::Math {
+namespace Stf {
 
 /// this is not the same as c stdlib's ldexp, not even close. This only works with the exponent and *WILL NOT* touch
 /// the mantissa.\n
@@ -25,6 +25,15 @@ template<std::floating_point T> constexpr T ldexp(T v, int exp) {
     parts.exponent = static_cast<typename U::raw_repr>(new_exp);
 
     return float_from_parts(parts);
+}
+
+template<std::floating_point T> constexpr T copysign(T mag, T sgn) {
+    const auto mag_parts = float_to_parts(mag);
+    const auto sgn_parts = float_to_parts(sgn);
+
+    mag_parts.sign = sgn_parts.sign;
+
+    return float_from_parts(mag_parts);
 }
 
 }

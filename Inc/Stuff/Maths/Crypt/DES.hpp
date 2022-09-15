@@ -36,7 +36,7 @@ constexpr uint64_t routine(uint64_t data, uint64_t raw_key) {
 
 }
 
-constexpr uint64_t crypt(uint64_t plaintext, uint64_t raw_key) {
+constexpr uint64_t encrypt(uint64_t plaintext, uint64_t raw_key) {
     return Detail::routine<false>(plaintext, raw_key);
 }
 

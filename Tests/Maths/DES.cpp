@@ -81,8 +81,40 @@ TEST(DES, Utilities) {
 TEST(DES, DES) {
     const uint64_t plaintext = 0x1234'56AB'CD13'2536ull;
     const uint64_t key = 0xAABB'0918'2736'CCDDull;
-    const auto encrypted = Stf::Crypt::DES::crypt(plaintext, key);
+    const auto encrypted = Stf::Crypt::DES::encrypt(plaintext, key);
 
     ASSERT_EQ(encrypted, 0xC0B7A8D05F3A829Cull);
     ASSERT_EQ(Stf::Crypt::DES::decrypt(encrypted, key), plaintext);
+}
+
+// https://github.com/kongfy/DES/blob/master/Riv85.txt
+TEST(DES, Recurrence) {
+    const uint64_t expected_values[16] {
+        0x8DA744E0C94E5E17,
+        0x0CDB25E3BA3C6D79,
+        0x4784C4BA5006081F,
+        0x1CF1FC126F2EF842,
+        0xE4BE250042098D13,
+        0x7BFC5DC6ADB5797C,
+        0x1AB3B4D82082FB28,
+        0xC1576A14DE707097,
+        0x739B68CD2E26782A,
+        0x2A59F0C464506EDB,
+        0xA5C39D4251F0A81E,
+        0x7239AC9A6107DDB1,
+        0x070CAC8590241233,
+        0x78F87B6E3DFECF61,
+        0x95EC2578C2C433F0,
+        0x1B1A2DDB4C642438,
+    };
+
+    uint64_t x = 0x9474'B8E8'C73B'CA7Dul;
+    for (auto i = 0uz; i < 16; i++) {
+        if ((i % 2) != 0) {
+            x = Stf::Crypt::DES::decrypt(x, x);
+        } else {
+            x = Stf::Crypt::DES::encrypt(x, x);
+        }
+        ASSERT_EQ(x, expected_values[i]);
+    }
 }

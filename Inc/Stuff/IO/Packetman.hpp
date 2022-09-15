@@ -4,7 +4,7 @@
 
 #include <Stuff/Refl/ReflNew.hpp>
 #include <Stuff/Refl/Serde.hpp>
-#include <Stuff/Maths/CRC.hpp>
+#include <Stuff/Maths/Check/CRC.hpp>
 
 #include "./Delim.hpp"
 
@@ -133,7 +133,7 @@ private:
         serialize(tx_buf.end() - serialized_size_v<T>, v);
         serialize(tx_buf.end() - total_needed_size, header);
 
-        CRC::CRC32State context {};
+        CRCState<CRCDescriptions::CRC32ISOHDLC> context {};
         for (size_t i = 0; i < total_needed_size; i++)
             context.update(tx_buf[i + leading_free_space]);
 
@@ -214,7 +214,7 @@ private:
 
         std::fill(decoded_span.begin(), decoded_span.begin() + 4, 0);
 
-        CRC::CRC32State context {};
+        CRCState<CRCDescriptions::CRC32ISOHDLC> context {};
         for (auto b : decoded_span)
             context.update(b);
 

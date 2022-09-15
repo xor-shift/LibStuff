@@ -45,7 +45,8 @@ add_library(${PROJECT_NAME}
         Inc/Stuff/Maths/Scalar/Trig.hpp
 
         Inc/Stuff/Maths/Bit.hpp
-        Inc/Stuff/Maths/CRC.hpp
+        Inc/Stuff/Maths/Check/CRC.hpp
+        Inc/Stuff/Maths/Crypt/DES.hpp
         Inc/Stuff/Maths/Fmt.hpp
         Inc/Stuff/Maths/Random.hpp
         Inc/Stuff/Maths/Scalar.hpp
@@ -104,6 +105,7 @@ if (LibStuffCompileTests)
 
             Tests/Maths/Bit.cpp
             Tests/Maths/CRC.cpp
+            Tests/Maths/DES.cpp
             Tests/Maths/Scalar.cpp
             Tests/Maths/Vector.cpp
 
@@ -129,6 +131,9 @@ endif ()
 if (LibStuffCompileBenchmarks)
 
     add_subdirectory(Thirdparty/benchmark)
+
+    add_executable(${PROJECT_NAME}_benchmark_des Benchmarks/main.cpp Benchmarks/Maths/DES.cpp)
+    target_link_libraries(${PROJECT_NAME}_benchmark_des ${PROJECT_NAME} benchmark)
 
     add_executable(${PROJECT_NAME}_benchmarks
             Benchmarks/main.cpp

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <Stuff/Maths/CRC.hpp>
+#include <Stuff/Maths/Check/CRC.hpp>
 
 #include <fmt/format.h>
 
@@ -35,9 +35,9 @@
     0xC4614AB8, 0x5D681B02, 0x2A6F2B94, 0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D };
 */
 
-template<Stf::CRC::Concepts::Description T> void run_check_test() {
-    Stf::CRC::CRCState<T, false> without_lookup {};
-    Stf::CRC::CRCState<T, true> with_lookup {};
+template<Stf::Concepts::CRCDescription T> void run_check_test() {
+    Stf::CRCState<T, false> without_lookup {};
+    Stf::CRCState<T, true> with_lookup {};
 
     for (const char c : std::string { "123456789" }) {
         without_lookup.update(c);
@@ -51,7 +51,7 @@ template<Stf::CRC::Concepts::Description T> void run_check_test() {
     ASSERT_EQ(with_lookup.finished_value(), expected);
 }
 
-template<Stf::CRC::Concepts::Description T, Stf::CRC::Concepts::Description... Ts> void run_check_tests() {
+template<Stf::Concepts::CRCDescription T, Stf::Concepts::CRCDescription... Ts> void run_check_tests() {
     run_check_test<T>();
 
     if constexpr (sizeof...(Ts) > 0)
@@ -59,16 +59,16 @@ template<Stf::CRC::Concepts::Description T, Stf::CRC::Concepts::Description... T
 }
 
 TEST(CRC, CheckValues) {
-    run_check_tests<Stf::CRC::Descriptions::CRC32ISOHDLC, Stf::CRC::Descriptions::CRC32BZIP2,
-        Stf::CRC::Descriptions::CRC16CCITT, Stf::CRC::Descriptions::CRC8AUTOSAR, Stf::CRC::Descriptions::CRC8Bluetooth,
-        Stf::CRC::Descriptions::CRC8CDMA2000, Stf::CRC::Descriptions::CRC8DARC, Stf::CRC::Descriptions::CRC8DVBS2,
-        Stf::CRC::Descriptions::CRC8GSMA, Stf::CRC::Descriptions::CRC8GSMB, Stf::CRC::Descriptions::CRC8HITAG,
-        Stf::CRC::Descriptions::CRC8I4321, Stf::CRC::Descriptions::CRC8ICODE, Stf::CRC::Descriptions::CRC8LTE,
-        Stf::CRC::Descriptions::CRC8MaximDow, Stf::CRC::Descriptions::CRC8MIFAREMAD, Stf::CRC::Descriptions::CRC8NRSC5,
-        Stf::CRC::Descriptions::CRC8Opensafety, Stf::CRC::Descriptions::CRC8ROHC, Stf::CRC::Descriptions::CRC8SAEJ1850,
-        Stf::CRC::Descriptions::CRC8SMBUS, Stf::CRC::Descriptions::CRC8TECH3250, Stf::CRC::Descriptions::CRC8WCDMA,
-        Stf::CRC::Descriptions::CRC10ATM, Stf::CRC::Descriptions::CRC10CDMA2000, Stf::CRC::Descriptions::CRC10GSM,
-        Stf::CRC::Descriptions::CRC11FlexRay, Stf::CRC::Descriptions::CRC11UMTS, Stf::CRC::Descriptions::CRC12CDMA2000,
-        Stf::CRC::Descriptions::CRC12DECT, Stf::CRC::Descriptions::CRC12GSM, Stf::CRC::Descriptions::CRC13BBC,
-        Stf::CRC::Descriptions::CRC14GSM, Stf::CRC::Descriptions::CRC15CAN, Stf::CRC::Descriptions::CRC15MPT1327>();
+    run_check_tests<Stf::CRCDescriptions::CRC32ISOHDLC, Stf::CRCDescriptions::CRC32BZIP2,
+        Stf::CRCDescriptions::CRC16CCITT, Stf::CRCDescriptions::CRC8AUTOSAR, Stf::CRCDescriptions::CRC8Bluetooth,
+        Stf::CRCDescriptions::CRC8CDMA2000, Stf::CRCDescriptions::CRC8DARC, Stf::CRCDescriptions::CRC8DVBS2,
+        Stf::CRCDescriptions::CRC8GSMA, Stf::CRCDescriptions::CRC8GSMB, Stf::CRCDescriptions::CRC8HITAG,
+        Stf::CRCDescriptions::CRC8I4321, Stf::CRCDescriptions::CRC8ICODE, Stf::CRCDescriptions::CRC8LTE,
+        Stf::CRCDescriptions::CRC8MaximDow, Stf::CRCDescriptions::CRC8MIFAREMAD, Stf::CRCDescriptions::CRC8NRSC5,
+        Stf::CRCDescriptions::CRC8Opensafety, Stf::CRCDescriptions::CRC8ROHC, Stf::CRCDescriptions::CRC8SAEJ1850,
+        Stf::CRCDescriptions::CRC8SMBUS, Stf::CRCDescriptions::CRC8TECH3250, Stf::CRCDescriptions::CRC8WCDMA,
+        Stf::CRCDescriptions::CRC10ATM, Stf::CRCDescriptions::CRC10CDMA2000, Stf::CRCDescriptions::CRC10GSM,
+        Stf::CRCDescriptions::CRC11FlexRay, Stf::CRCDescriptions::CRC11UMTS, Stf::CRCDescriptions::CRC12CDMA2000,
+        Stf::CRCDescriptions::CRC12DECT, Stf::CRCDescriptions::CRC12GSM, Stf::CRCDescriptions::CRC13BBC,
+        Stf::CRCDescriptions::CRC14GSM, Stf::CRCDescriptions::CRC15CAN, Stf::CRCDescriptions::CRC15MPT1327>();
 }

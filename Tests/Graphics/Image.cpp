@@ -8,7 +8,7 @@
 
 #include <Stuff/Files/Format.hpp>
 #include <Stuff/Graphics/Image.hpp>
-#include <Stuff/Maths/CRC.hpp>
+#include <Stuff/Maths/Check/CRC.hpp>
 
 TEST(Image, Idk) {
     Stf::Gfx::Image image(4, 8, Stf::Gfx::Colors::black);
@@ -23,7 +23,7 @@ TEST(Image, Idk) {
 }
 
 template<typename Allocator = std::allocator<uint8_t>> constexpr uint32_t image_checksum(Stf::Gfx::Image<Allocator> const& image) {
-    Stf::CRC::CRC32State state {};
+    Stf::CRCState<Stf::CRCDescriptions::CRC32ISOHDLC, true> state {};
 
     for (const auto v = std::bit_cast<std::array<uint8_t, sizeof(size_t) * 2>>(image.dimensions()); const auto b : v) {
         state.update(b);

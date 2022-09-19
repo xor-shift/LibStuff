@@ -65,6 +65,9 @@ add_library(${PROJECT_NAME}
         Inc/Stuff/Util/Hacks/Coroutines.hpp
         Inc/Stuff/Util/Hacks/Expected.hpp
         Inc/Stuff/Util/Hacks/Try.hpp
+
+        Inc/Stuff/Util/CPUID/Features.hpp
+
         Inc/Stuff/Util/Alloc.hpp
         Inc/Stuff/Util/Conv.hpp
         Inc/Stuff/Util/DummyIterator.hpp
@@ -83,6 +86,8 @@ target_sources(${PROJECT_NAME} PUBLIC
         Src/IO/Delim.cpp
         Src/IO/GPS.cpp
         Src/IO/SoftUART.cpp
+
+        Src/Util/CPUID/Features.cpp
         )
 
 if (LibStuffUseFMT)
@@ -134,6 +139,7 @@ if (LibStuffCompileBenchmarks)
 
     add_executable(${PROJECT_NAME}_benchmark_des Benchmarks/main.cpp Benchmarks/Maths/DES.cpp)
     target_link_libraries(${PROJECT_NAME}_benchmark_des ${PROJECT_NAME} benchmark)
+    target_compile_options(${PROJECT_NAME}_benchmark_des PRIVATE -march=native -mtune=native)
 
     add_executable(${PROJECT_NAME}_benchmarks
             Benchmarks/main.cpp
@@ -165,6 +171,11 @@ if (LibStuffCompileExamples)
     add_executable(${PROJECT_NAME}_examples_GPS
             Examples/GPS.cpp)
     target_link_libraries(${PROJECT_NAME}_examples_GPS
+            ${PROJECT_NAME})
+
+    add_executable(${PROJECT_NAME}_examples_CPUID
+            Examples/CPUID.cpp)
+    target_link_libraries(${PROJECT_NAME}_examples_CPUID
             ${PROJECT_NAME})
 
 endif ()

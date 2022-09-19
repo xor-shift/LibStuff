@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <type_traits>
 
+#include <immintrin.h>
+
 namespace Stf {
 
 namespace Detail {
@@ -83,6 +85,29 @@ template<typename T> constexpr T convert_endian(T v, std::endian from, std::endi
     if (to == from)
         return v;
     return reverse_bytes(v);
+}
+
+namespace Detail {
+
+template<typename T>
+inline T permute_bits_sse(T val, auto const& lookup) {
+    //TODO: actually implement this
+    const auto full_cycles = std::size(lookup) / 16;
+    const auto residual = std::size(lookup) % 16;
+    const auto total_cycles = full_cycles + (residual ? 1 : 0);
+
+    alignas(16) uint8_t a_data[16] {};
+    alignas(16) uint8_t b_data[16] {};
+
+    for (auto i = 0uz; i < total_cycles; i++) {
+        auto a = _mm_load_si128(reinterpret_cast<__m128i*>(a_data));
+        auto b = _mm_load_si128(reinterpret_cast<__m128i*>(b_data));
+        auto c = _mm_shuffle_epi8(a, b);
+
+        auto unpacked = _mm_movemask_epi8(c);
+    }
+}
+
 }
 
 /// the LSB-0 bit index `i` of the result will be picked from LSB-0 bit index

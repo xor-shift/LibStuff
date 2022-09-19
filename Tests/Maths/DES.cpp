@@ -27,16 +27,45 @@ TEST(DES, Lookups) {
 }
 
 TEST(DES, SBox) {
+    ASSERT_EQ(Stf::Crypt::DES::Detail::k_sub_tables[0][0b1'0001'1], 0b1100);
+    ASSERT_EQ(Stf::Crypt::DES::Detail::k_sub_tables[7][0b0'0000'0], 0b1101);
+
+    for (uint64_t v = 0; v < 0x3Ful; v++) {
+        // using Stf::Crypt::DES::Detail::Bitslice::X86::mk_sbox;
+        static constexpr uint64_t one = 0xFFFF'FFFF'FFFF'FFFFul;
+        std::array<uint64_t, 6> in;
+
+        for (uint64_t i = 0; i < 6; i++) {
+            const auto is_set = ((v >> (5 - i)) & 1) != 0;
+            in[i] = is_set ? one : 0;
+        }
+
+        for (size_t box = 0; box < 8; box++) {
+            std::array<uint64_t, 4> out {};
+
+            auto* fn = Stf::Crypt::DES::Detail::Bitslice::X86::mk_sboxes[box];
+
+            const auto expected = Stf::Crypt::DES::Detail::k_sub_tables[box][v];
+            fn(in[0], in[1], in[2], in[3], in[4], in[5], out[0], out[1], out[2], out[3]);
+
+            ASSERT_EQ(out[0], (expected >> 3) & 1 ? one : 0);
+            ASSERT_EQ(out[1], (expected >> 2) & 1 ? one : 0);
+            ASSERT_EQ(out[2], (expected >> 1) & 1 ? one : 0);
+            ASSERT_EQ(out[3], (expected >> 0) & 1 ? one : 0);
+        }
+    }
+
     uint64_t val = 0x1234'5678'9ABCul;
     uint64_t expected = Stf::Crypt::DES::Detail::sbox_transform_lookup(val);
 
-    std::array<uint64_t, 64> vectorised { val };
-    Stf::Crypt::DES::Detail::sbox_transform_bitslice_x86(vectorised);
+    const auto single_0 = Stf::Crypt::DES::Detail::sbox_transform_bitslice<true>(val);
+    const auto single_1 = Stf::Crypt::DES::Detail::sbox_transform_bitslice<false>(val);
 
-    fmt::print("expected: {:016X}\n", expected);
-    fmt::print("got     : {:016X}\n", vectorised[0]);
+    // fmt::print("expected: {:016X}\n", expected);
+    // fmt::print("single  : {:016X}\n", single);
 
-    ASSERT_EQ(expected, vectorised[0]);
+    ASSERT_EQ(expected, single_0);
+    ASSERT_EQ(expected, single_1);
 }
 
 TEST(DES, Utilities) {
@@ -73,9 +102,6 @@ TEST(DES, Utilities) {
     ASSERT_EQ(rotl_28_2(0x7FF'FFFF), 0xFFF'FFFD);
     ASSERT_EQ(rotl_28_2(0x8FF'FFF0), 0x3FF'FFC2);
     ASSERT_EQ(rotl_28_2(0xAAA'AAAA), 0xAAA'AAAA);
-
-    ASSERT_EQ(Stf::Crypt::DES::Detail::k_sub_tables[0][0b1'0001'1], 0b1100);
-    ASSERT_EQ(Stf::Crypt::DES::Detail::k_sub_tables[7][0b0'0000'0], 0b1101);
 }
 
 TEST(DES, DES) {
@@ -118,3 +144,65 @@ TEST(DES, Recurrence) {
         ASSERT_EQ(x, expected_values[i]);
     }
 }
+
+// crypt(3) functions adapted from:
+// https://minnie.tuhs.org/cgi-bin/utree.pl?file=V7/usr/src/libc/gen/crypt.c
+constexpr std::array<uint64_t, 48> expected_expansion_table(std::string_view salt) {
+    std::array<uint64_t, 48> ret {
+        32, 1, 2, 3, 4, 5,      //
+        4, 5, 6, 7, 8, 9,       //
+        8, 9, 10, 11, 12, 13,   //
+        12, 13, 14, 15, 16, 17, //
+        16, 17, 18, 19, 20, 21, //
+        20, 21, 22, 23, 24, 25, //
+        24, 25, 26, 27, 28, 29, //
+        28, 29, 30, 31, 32, 1,  //
+    };
+
+    for (auto i = 0uz; i < 2; i++) {
+        auto c = salt[i];
+        if (c > 'Z')
+            c -= 6;
+        if (c > '9')
+            c -= 7;
+        c -= '.';
+        for (auto j = 0uz; j < 6; j++) {
+            if ((c >> j) & 1) {
+                const auto temp = ret[6 * i + j];
+                ret[6 * i + j] = ret[6 * i + j + 24];
+                ret[6 * i + j + 24] = temp;
+            }
+        }
+    }
+
+    return ret;
+}
+
+TEST(DESCrypt3, ExpansionTable) {
+    std::string_view salt_charset =   //
+        "./"                          //
+        "0123456789"                  //
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"  //
+        "abcdefghijklmnopqrstuvwxyz"; //2^6
+
+    for (auto i = 0uz; i < 64uz; i++) {
+        for (auto j = 0uz; j < 64uz; j++) {
+            char salt[3] {salt_charset[i], salt_charset[j], '\0'};
+
+            using Stf::Crypt::DES::Detail::permutation_table;
+
+            const auto expected = permutation_table(expected_expansion_table(salt)._M_elems, 32uz);
+            const auto got = Stf::Crypt::DES::Detail::get_crypt_expansion_block(salt);
+
+            ASSERT_EQ(expected, got);
+        }
+    }
+}
+
+TEST(DESCrypt3, Crypt) {
+    ASSERT_EQ(Stf::Crypt::DES::crypt("", ".."), "..X8NBuQ4l6uQ");
+    ASSERT_EQ(Stf::Crypt::DES::crypt("AAAAAAAA", ".."), "..SttI9HzezEY");
+    ASSERT_EQ(Stf::Crypt::DES::crypt("AAAAAAAA", "AA"), "AALDLUg7SsaxM");
+}
+
+TEST(DES, Tripcode) { }

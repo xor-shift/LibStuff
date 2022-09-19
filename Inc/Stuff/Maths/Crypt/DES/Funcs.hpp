@@ -36,9 +36,9 @@ constexpr uint64_t remove_key_parity(uint64_t key) {
 }
 
 // 64 to 56, strips parity and applies PC1
-constexpr uint64_t prepare_key(uint64_t key) {
+constexpr uint64_t prepare_key(uint64_t key, PTablePC1 const& pc_1 = k_key_sched_pc_1) {
     // const auto stripped = remove_key_parity(key);
-    return Stf::permute_bits(key, k_key_sched_pc_1);
+    return Stf::permute_bits(key, pc_1);
 }
 
 template<typename T> constexpr T rotl(T v, T bits, T n) {
@@ -51,7 +51,7 @@ template<typename T> constexpr T rotl(T v, T bits, T n) {
 }
 
 // 56 to 56 and 48, turns subkey_(n-1) to subkey_n_
-constexpr std::pair<uint64_t, uint64_t> subkey_n(uint64_t key, uint64_t round) {
+constexpr std::pair<uint64_t, uint64_t> subkey_n(uint64_t key, uint64_t round, PTablePC2 const& pc_2 = k_key_sched_pc_2) {
     const auto left_key = (key >> 28) & 0xFFFFFFF;
     const auto right_key = key & 0xFFFFFFF;
     const auto shift_by = k_key_shifts[round];
@@ -60,7 +60,7 @@ constexpr std::pair<uint64_t, uint64_t> subkey_n(uint64_t key, uint64_t round) {
     const auto shifted_right_key = rotl<uint64_t>(right_key, 28, shift_by);
 
     const auto new_key = ((shifted_left_key << 28) | shifted_right_key);
-    const auto permuted_key = Stf::permute_bits(new_key, k_key_sched_pc_2);
+    const auto permuted_key = Stf::permute_bits(new_key, pc_2);
 
     /*fmt::print("left    : {:07X} -> {:07X}\n", left_key, shifted_left_key);
     fmt::print("right   : {:07X} -> {:07X}\n", right_key, shifted_right_key);
@@ -71,11 +71,11 @@ constexpr std::pair<uint64_t, uint64_t> subkey_n(uint64_t key, uint64_t round) {
 }
 
 // 48 to 32, S-box transforms of the Feistel block. uses k_sub_tables
-constexpr uint64_t sbox_transform_lookup(uint64_t data) {
+constexpr uint64_t sbox_transform_lookup(uint64_t data, STableSBox const& s_boxes = k_sub_tables) {
     uint64_t ret = 0;
     for (uint64_t i = 0ull; i < 8; i++) {
         const auto s_index = (data >> (48 - (i + 1) * 6)) & 0x3F;
-        const auto s_res = k_sub_tables[i][s_index];
+        const auto s_res = s_boxes[i][s_index];
         ret <<= 4;
         ret |= s_res;
     }
@@ -83,40 +83,13 @@ constexpr uint64_t sbox_transform_lookup(uint64_t data) {
     return ret;
 }
 
-// 48 to 32, S-box transforms of the Feistel block, uses the bitslice approach
-constexpr void sbox_transform_bitslice_x86(std::array<uint64_t, 64>& data) {
-    // LSB-0
-    uint64_t input[48];       // 0th bit is for data[0] for all input[n]
-    uint64_t output[32] = {}; // 0th element is the MSB
-
-    for (uint64_t bit_idx = 0; bit_idx < 48; bit_idx++) {
-        uint64_t bits = 0;
-        for (uint64_t data_index = 0; data_index < 64; data_index++) {
-            auto b = (data[63 - data_index] >> (47 - bit_idx)) & 1;
-            bits <<= 1;
-            bits |= b;
-        }
-        input[bit_idx] = bits;
-    }
-
-    Detail::Bitslice::X86::helper(input, output);
-
-    for (uint64_t bit_idx = 0; bit_idx < 32; bit_idx++) {
-        uint64_t bits = output[bit_idx];
-        for (uint64_t data_index = 0; data_index < 64; data_index++) {
-            data[63 - data_index] <<= 1;
-            data[63 - data_index] |= bits & 1;
-            bits >>= 1;
-        }
-    }
-}
-
 // 32 to 32
-constexpr uint64_t feistel_block(uint64_t /* 32 bits */ data, uint64_t round_key) {
-    const auto expanded_data = Stf::permute_bits(data, k_expansion_table);
+constexpr uint64_t feistel_block(uint64_t /* 32 bits */ data, uint64_t round_key, //
+    PETableHB const& expansion_table = k_expansion_table, PTableFFinal const& final_table = k_f_final_p_table) {
+    const auto expanded_data = Stf::permute_bits(data, expansion_table);
     const auto xored_data = expanded_data ^ round_key;
     const auto s_result = sbox_transform_lookup(xored_data);
-    return Stf::permute_bits(s_result, k_f_final_p_table);
+    return Stf::permute_bits(s_result, final_table);
 }
 
 constexpr std::array<uint64_t, 16> key_schedule(uint64_t raw_key) {
@@ -132,6 +105,38 @@ constexpr std::array<uint64_t, 16> key_schedule(uint64_t raw_key) {
     }
 
     return round_keys;
+}
+
+}
+
+namespace Stf::Crypt::DES::Detail {
+
+// test function
+template<bool MSBFirst = true> constexpr uint64_t sbox_transform_bitslice(uint64_t data) {
+    uint64_t input[48];
+    uint64_t output[32] = {};
+
+    for (uint64_t bit_idx = 0; bit_idx < 48; bit_idx++) {
+        uint64_t bit;
+        if constexpr (MSBFirst)
+            bit = (data >> (47 - bit_idx)) & 1;
+        else
+            bit = (data >> (47 - bit_idx)) & 1;
+        input[bit_idx] = bit != 0 ? 0xFFFF'FFFF'FFFF'FFFFul : 0ul;
+    }
+
+    Detail::Bitslice::X86::helper(input, output);
+
+    uint64_t ret = 0;
+    for (uint64_t bit_idx = 0; bit_idx < 32; bit_idx++) {
+        const uint64_t bits = output[bit_idx];
+
+        const uint64_t data_index = 13; // random
+        const uint64_t bit = ((bits >> data_index) & 1) << (31 - bit_idx);
+        ret |= bit;
+    }
+
+    return ret;
 }
 
 }

@@ -7,6 +7,27 @@
 
 namespace Stf::Crypt::DES::Detail {
 
+using PTableInitial = std::array<uint64_t, 64>;
+using PTableFinal = std::array<uint64_t, 64>;
+using PETableHB = std::array<uint64_t, 48>;
+using STableSBox = std::array<std::array<uint64_t, 64>, 8>;
+using PTableFFinal = std::array<uint64_t, 32>;
+using PTablePC1 = std::array<uint64_t, 56>;
+using PTablePC2 = std::array<uint64_t, 48>;
+
+/*struct Tables {
+    std::array<uint64_t, 64> p_initial; //64 to 64, plaintext/ciphertext
+    std::array<uint64_t, 64> p_final; //64 to 64, ciphertext/plaintext
+    std::array<uint64_t, 48> ep_plaintext_expansion; //32 to 48, half-block
+    std::array<std::array<uint64_t, 64>, 8> s_boxes; //6 to 4, s-boxes
+    std::array<uint64_t, 32> p_feistel_final; //32 to 32, half-block
+
+    std::array<uint64_t, 56> cp_key_sched_pc_1; //64 to 56, key
+    std::array<uint64_t, 48> cp_key_sched_pc_2; //56 to 48, half-keys
+};
+
+inline constexpr Tables k_default_tables {};*/
+
 /// DES tables are MSB-1 which is very inconvenient for bit manipulation. this
 /// function will transform an N-tuple of DES lookup values into a std::array of
 /// `sizeof(T) * CHAR_BIT` elements containing a lookup adequate for
@@ -76,7 +97,7 @@ inline constexpr auto k_expansion_table = permutation_table<uint64_t>(
     32);
 
 // 6 bits to 4 bits, S boxes
-inline constexpr std::array<uint64_t, 64> k_sub_tables[] {
+inline constexpr std::array<std::array<uint64_t, 64>, 8> k_sub_tables {
     substitution_table<uint64_t>({
         14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7, //
         0, 15, 7, 4, 14, 2, 13, 1, 10, 6, 12, 11, 9, 5, 3, 8, //
@@ -163,14 +184,5 @@ inline constexpr auto k_key_sched_pc_2 = permutation_table<uint64_t>(
         34, 53, 46, 42, 50, 36, 29, 32, //
     },
     56);
-
-inline constexpr auto k_key_compression_table = permutation_table<uint64_t>({
-    14, 17, 11, 24, 1, 5, 3, 28,    //
-    15, 6, 21, 10, 23, 19, 12, 4,   //
-    26, 8, 16, 7, 27, 20, 13, 2,    //
-    41, 52, 31, 37, 47, 55, 30, 40, //
-    51, 45, 33, 48, 44, 49, 39, 56, //
-    34, 53, 46, 42, 50, 36, 29, 32, //
-});
 
 }

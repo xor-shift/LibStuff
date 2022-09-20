@@ -29,43 +29,6 @@ TEST(DES, Lookups) {
 TEST(DES, SBox) {
     ASSERT_EQ(Stf::Crypt::DES::Detail::k_sub_tables[0][0b1'0001'1], 0b1100);
     ASSERT_EQ(Stf::Crypt::DES::Detail::k_sub_tables[7][0b0'0000'0], 0b1101);
-
-    for (uint64_t v = 0; v < 0x3Ful; v++) {
-        // using Stf::Crypt::DES::Detail::Bitslice::X86::mk_sbox;
-        static constexpr uint64_t one = 0xFFFF'FFFF'FFFF'FFFFul;
-        std::array<uint64_t, 6> in;
-
-        for (uint64_t i = 0; i < 6; i++) {
-            const auto is_set = ((v >> (5 - i)) & 1) != 0;
-            in[i] = is_set ? one : 0;
-        }
-
-        for (size_t box = 0; box < 8; box++) {
-            std::array<uint64_t, 4> out {};
-
-            auto* fn = Stf::Crypt::DES::Detail::Bitslice::X86::mk_sboxes[box];
-
-            const auto expected = Stf::Crypt::DES::Detail::k_sub_tables[box][v];
-            fn(in[0], in[1], in[2], in[3], in[4], in[5], out[0], out[1], out[2], out[3]);
-
-            ASSERT_EQ(out[0], (expected >> 3) & 1 ? one : 0);
-            ASSERT_EQ(out[1], (expected >> 2) & 1 ? one : 0);
-            ASSERT_EQ(out[2], (expected >> 1) & 1 ? one : 0);
-            ASSERT_EQ(out[3], (expected >> 0) & 1 ? one : 0);
-        }
-    }
-
-    uint64_t val = 0x1234'5678'9ABCul;
-    uint64_t expected = Stf::Crypt::DES::Detail::sbox_transform_lookup(val);
-
-    const auto single_0 = Stf::Crypt::DES::Detail::sbox_transform_bitslice<true>(val);
-    const auto single_1 = Stf::Crypt::DES::Detail::sbox_transform_bitslice<false>(val);
-
-    // fmt::print("expected: {:016X}\n", expected);
-    // fmt::print("single  : {:016X}\n", single);
-
-    ASSERT_EQ(expected, single_0);
-    ASSERT_EQ(expected, single_1);
 }
 
 TEST(DES, Utilities) {
@@ -183,11 +146,11 @@ TEST(DESCrypt3, ExpansionTable) {
         "./"                          //
         "0123456789"                  //
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"  //
-        "abcdefghijklmnopqrstuvwxyz"; //2^6
+        "abcdefghijklmnopqrstuvwxyz"; // 2^6
 
     for (auto i = 0uz; i < 64uz; i++) {
         for (auto j = 0uz; j < 64uz; j++) {
-            char salt[3] {salt_charset[i], salt_charset[j], '\0'};
+            char salt[3] { salt_charset[i], salt_charset[j], '\0' };
 
             using Stf::Crypt::DES::Detail::permutation_table;
 
@@ -199,10 +162,127 @@ TEST(DESCrypt3, ExpansionTable) {
     }
 }
 
+constexpr uint64_t expected_key(std::string_view key) {
+    auto key_s = std::string { key };
+    const auto* pw = key_s.c_str();
+    char c;
+    std::array<char, 64> block {};
+
+    for (int i = 0; (c = *pw) && i < 64; pw++) {
+        for (int j = 0; j < 7; j++, i++)
+            block[i] = (c >> (6 - j)) & 01;
+        i++;
+    }
+
+    return c;
+}
+
+TEST(DESCrypt3, Key) {
+    auto i = expected_key("AAAAAAAA"); //
+}
+
+#include <random>
+
+inline void generate_crypt_tests() {
+    std::random_device rd {};
+    static std::ranlux48 engine { rd() };
+
+    static constexpr size_t n_tests = 64;
+
+    std::array<std::pair<std::string, std::string>, n_tests> test_vector;
+
+    for (auto i = 0uz; i < 64uz; i++) {
+        std::uniform_int_distribution<char> plaintext_gen { ' ', '~' };
+
+        char c[10];
+        for (auto j = 0uz; j < 10uz; j++) {
+            c[j] = plaintext_gen(engine);
+        }
+
+        test_vector[i].first = std::string_view { c, 8 };
+        test_vector[i].second = std::string_view { c + 8, 2 };
+    }
+
+    for (auto const& [key, salt] : test_vector) {
+        fmt::print("{{\"{}\", \"{}\"}},\n", key, salt);
+    }
+
+    fmt::print("echo 'print");
+    for (auto const& [key, salt] : test_vector) {
+        fmt::print(" crypt(\"{}\", \"{}\") . \"\\n\" .", key, salt);
+    }
+    fmt::print(" \"\\n\"' | perl");
+}
+
 TEST(DESCrypt3, Crypt) {
     ASSERT_EQ(Stf::Crypt::DES::crypt("", ".."), "..X8NBuQ4l6uQ");
     ASSERT_EQ(Stf::Crypt::DES::crypt("AAAAAAAA", ".."), "..SttI9HzezEY");
+    ASSERT_EQ(Stf::Crypt::DES::crypt("BBBBBBBB", ".."), "..F6F5SQeOMm2");
     ASSERT_EQ(Stf::Crypt::DES::crypt("AAAAAAAA", "AA"), "AALDLUg7SsaxM");
+    ASSERT_EQ(Stf::Crypt::DES::crypt("AAAAAAAA", "//"), "//6qeRrsgI3aE");
+    ASSERT_EQ(Stf::Crypt::DES::crypt("AAAAAAAA", "/A"), "/AwuVNnFjiz2g");
+    ASSERT_EQ(Stf::Crypt::DES::crypt("AAAAAAAA", "A/"), "A/jMZ7uYiPMpU");
+
+    ASSERT_EQ(Stf::Crypt::DES::crypt(".AAAAAAA", ".."), "..PxtcFr/TCPM");
+    ASSERT_EQ(Stf::Crypt::DES::crypt("..AAAAAA", ".."), "..KwR2/fQaBZk");
+
+    // generate_crypt_tests();
 }
 
-TEST(DES, Tripcode) { }
+TEST(DES, Tripcode) {
+    ASSERT_EQ(Stf::Crypt::DES::tripcode("...AAAAA"), "BtNKI5JOy2");
+    ASSERT_EQ(Stf::Crypt::DES::tripcode("AAAAAAAA"), "DLUg7SsaxM");
+    ASSERT_EQ(Stf::Crypt::DES::tripcode("Hockeyhare"), "qSck1IAj6M");
+}
+
+TEST(BitsliceDES, SBoxes) {
+    using Stf::Crypt::DES::Detail::Bitslice::X86::mk_sbox;
+    static constexpr void (*mk_sboxes[8])(SBOX_ARGS) = {
+        mk_sbox<1>,
+        mk_sbox<2>,
+        mk_sbox<3>,
+        mk_sbox<4>,
+        mk_sbox<5>,
+        mk_sbox<6>,
+        mk_sbox<7>,
+        mk_sbox<8>,
+    };
+
+    for (uint64_t v = 0; v < 0x3Ful; v++) {
+        static constexpr uint64_t one = 0xFFFF'FFFF'FFFF'FFFFul;
+        std::array<uint64_t, 6> in;
+
+        for (uint64_t i = 0; i < 6; i++) {
+            const auto is_set = ((v >> (5 - i)) & 1) != 0;
+            in[i] = is_set ? one : 0;
+        }
+
+        for (size_t box = 0; box < 8; box++) {
+            std::array<uint64_t, 4> out {};
+
+            auto* fn = mk_sboxes[box];
+
+            const auto expected = Stf::Crypt::DES::Detail::k_sub_tables[box][v];
+            fn(in[0], in[1], in[2], in[3], in[4], in[5], out[0], out[1], out[2], out[3]);
+
+            ASSERT_EQ(out[0], (expected >> 3) & 1 ? one : 0);
+            ASSERT_EQ(out[1], (expected >> 2) & 1 ? one : 0);
+            ASSERT_EQ(out[2], (expected >> 1) & 1 ? one : 0);
+            ASSERT_EQ(out[3], (expected >> 0) & 1 ? one : 0);
+        }
+    }
+
+    uint64_t val = 0x1234'5678'9ABCul;
+    uint64_t expected = Stf::Crypt::DES::Detail::sbox_transform_lookup(val);
+
+    const auto single_0 = Stf::Crypt::DES::Detail::sbox_transform_bitslice<true>(val);
+    const auto single_1 = Stf::Crypt::DES::Detail::sbox_transform_bitslice<false>(val);
+
+    // fmt::print("expected: {:016X}\n", expected);
+    // fmt::print("single  : {:016X}\n", single);
+
+    ASSERT_EQ(expected, single_0);
+    ASSERT_EQ(expected, single_1);
+}
+
+TEST(BitsliceDES, Single) { }

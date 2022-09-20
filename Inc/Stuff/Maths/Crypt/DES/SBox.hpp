@@ -527,17 +527,6 @@ template<> constexpr void mk_sbox<8>(SBOX_ARGS) {
     out4 ^= x31;
 }
 
-inline constexpr void (*mk_sboxes[8])(SBOX_ARGS) = {
-    mk_sbox<1>,
-    mk_sbox<2>,
-    mk_sbox<3>,
-    mk_sbox<4>,
-    mk_sbox<5>,
-    mk_sbox<6>,
-    mk_sbox<7>,
-    mk_sbox<8>,
-};
-
 template<size_t N = 8> void helper(uint64_t (&input)[48], uint64_t (&output)[32]) {
     const auto in_start_idx = (N - 1) * 6;
     const auto out_start_idx = (N - 1) * 4;

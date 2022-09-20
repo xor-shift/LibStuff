@@ -7,9 +7,9 @@ namespace Stf::Crypt::DES {
 namespace Detail {
 
 template<bool Reverse>
-constexpr uint64_t routine(uint64_t data, uint64_t raw_key, PETableHB const& expansion_table = k_expansion_table) {
+constexpr uint64_t routine(uint64_t data, uint64_t key, PETableHB const& expansion_table = k_expansion_table) {
     const auto input_permuted = Stf::permute_bits(data, k_initial_permutation_table);
-    const auto round_keys = Detail::key_schedule(raw_key);
+    const auto round_keys = Detail::key_schedule(key);
 
     auto left = input_permuted >> 32;
     auto right = input_permuted & 0xFFFF'FFFFul;
@@ -33,24 +33,6 @@ constexpr uint64_t routine(uint64_t data, uint64_t raw_key, PETableHB const& exp
     const auto pre_permutation = (left << 32) | right;
     return Stf::permute_bits(pre_permutation, k_final_permutation_table);
 }
-
-template<bool Reverse>
-constexpr uint64_t routine_parallel(std::array<uint64_t, 64> data, std::array<uint64_t, 64> raw_key) {
-    return 0;
-}
-
-}
-
-constexpr uint64_t encrypt(uint64_t plaintext, uint64_t raw_key) {
-    return Detail::routine<false>(plaintext, raw_key);
-}
-
-constexpr uint64_t decrypt(uint64_t ciphertext, uint64_t raw_key) {
-    return Detail::routine<true>(ciphertext, raw_key);
-}
-
-namespace Detail {
-
 constexpr std::array<uint64_t, 48> get_crypt_expansion_block(std::string_view salt) {
     auto ret = k_expansion_table;
 
@@ -108,19 +90,38 @@ constexpr std::string crypt_base64(std::string_view salt, uint64_t data) {
     return ret;
 }
 
-constexpr uint64_t get_crypt_raw_key(std::string_view pw) {
+constexpr uint64_t get_crypt_key(std::string_view pw) {
     uint64_t ret = 0;
-    for (auto i = 0; i < std::min(pw.size(), 8uz); i++) {
-        ret >>= 8;
-        ret |= Stf::reverse_bits(static_cast<uint64_t>(pw[i]));
+
+    for (auto i = 0uz; i < std::min(pw.size(), 8uz); i++) {
+        ret <<= 8;
+        ret |= pw[i] & 0x7F;
+
+        /*for (uint8_t j = 0; j < 7; j++) {
+            ret <<= 1;
+            ret |= static_cast<uint64_t>((c >> (6 - j)) & 1);
+        }
+        ret <<= 1;*/
     }
+    ret <<= 1;
+
+    //fmt::print("{:064b}\n", ret);
+
+    ret = prepare_key(ret);
 
     return ret;
 }
 
-//static_assert(get_crypt_raw_key("A") == 'A');
-//static_assert(get_crypt_raw_key("AB") == (('A' << 8) | 'B'));
+}
 
+constexpr uint64_t encrypt(uint64_t plaintext, uint64_t raw_key) {
+    const auto key = Detail::prepare_key(raw_key);
+    return Detail::routine<false>(plaintext, key);
+}
+
+constexpr uint64_t decrypt(uint64_t ciphertext, uint64_t raw_key) {
+    const auto key = Detail::prepare_key(raw_key);
+    return Detail::routine<true>(ciphertext, key);
 }
 
 // UNIX v7 crypt(3)
@@ -135,21 +136,49 @@ constexpr std::string crypt(std::string_view pw, std::string_view salt) {
         pw = pw.substr(0, 8);
 
     const auto expansion_table = Detail::get_crypt_expansion_block(salt);
-    const auto raw_key = Detail::get_crypt_raw_key(pw);
+    const auto key = Detail::get_crypt_key(pw);
 
     uint64_t block = 0;
 
     for (auto i = 0uz; i < 25; i++)
-        block = Detail::routine<false>(block, raw_key, expansion_table);
+        block = Detail::routine<false>(block, key, expansion_table);
 
     return Detail::crypt_base64(salt, block);
 }
 
-
-
 constexpr std::string tripcode(std::string_view tripkey) {
+    if (tripkey.empty())
+        return "";
 
-    return "";
+    char salt[2];
+
+    if (tripkey.size() == 1) {
+        salt[0] = 'H';
+        salt[1] = '.';
+    } else if (tripkey.size() == 2) {
+        salt[0] = tripkey[1];
+        salt[1] = 'H';
+    } else {
+        salt[0] = tripkey[1];
+        salt[1] = tripkey[2];
+    }
+
+    auto salt_transform = [](char c) -> char {
+        if (c >= ':' && c <= '@')
+            return 'A' + (c - ':');
+
+        if (c >= '[' && c <= '`')
+            return 'a' + (c - '[');
+
+        return c;
+    };
+
+    salt[0] = salt_transform(salt[0]);
+    salt[1] = salt_transform(salt[1]);
+
+    auto trip = crypt(tripkey, { salt, 2 });
+
+    return trip.substr(3);
 }
 
 }

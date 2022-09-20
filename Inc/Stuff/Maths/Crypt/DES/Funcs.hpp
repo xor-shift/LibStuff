@@ -92,11 +92,9 @@ constexpr uint64_t feistel_block(uint64_t /* 32 bits */ data, uint64_t round_key
     return Stf::permute_bits(s_result, final_table);
 }
 
-constexpr std::array<uint64_t, 16> key_schedule(uint64_t raw_key) {
-    const auto prepared_key = Detail::prepare_key(raw_key);
-
+constexpr std::array<uint64_t, 16> key_schedule(uint64_t key) {
     std::array<uint64_t, 16> round_keys;
-    uint64_t prev_key = prepared_key;
+    uint64_t prev_key = key;
 
     for (uint64_t i = 0; i < 16; i++) {
         const auto [new_key, round_key] = Detail::subkey_n(prev_key, i);

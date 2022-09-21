@@ -162,58 +162,6 @@ TEST(DESCrypt3, ExpansionTable) {
     }
 }
 
-constexpr uint64_t expected_key(std::string_view key) {
-    auto key_s = std::string { key };
-    const auto* pw = key_s.c_str();
-    char c;
-    std::array<char, 64> block {};
-
-    for (int i = 0; (c = *pw) && i < 64; pw++) {
-        for (int j = 0; j < 7; j++, i++)
-            block[i] = (c >> (6 - j)) & 01;
-        i++;
-    }
-
-    return c;
-}
-
-TEST(DESCrypt3, Key) {
-    auto i = expected_key("AAAAAAAA"); //
-}
-
-#include <random>
-
-inline void generate_crypt_tests() {
-    std::random_device rd {};
-    static std::ranlux48 engine { rd() };
-
-    static constexpr size_t n_tests = 64;
-
-    std::array<std::pair<std::string, std::string>, n_tests> test_vector;
-
-    for (auto i = 0uz; i < 64uz; i++) {
-        std::uniform_int_distribution<char> plaintext_gen { ' ', '~' };
-
-        char c[10];
-        for (auto j = 0uz; j < 10uz; j++) {
-            c[j] = plaintext_gen(engine);
-        }
-
-        test_vector[i].first = std::string_view { c, 8 };
-        test_vector[i].second = std::string_view { c + 8, 2 };
-    }
-
-    for (auto const& [key, salt] : test_vector) {
-        fmt::print("{{\"{}\", \"{}\"}},\n", key, salt);
-    }
-
-    fmt::print("echo 'print");
-    for (auto const& [key, salt] : test_vector) {
-        fmt::print(" crypt(\"{}\", \"{}\") . \"\\n\" .", key, salt);
-    }
-    fmt::print(" \"\\n\"' | perl");
-}
-
 TEST(DESCrypt3, Crypt) {
     ASSERT_EQ(Stf::Crypt::DES::crypt("", ".."), "..X8NBuQ4l6uQ");
     ASSERT_EQ(Stf::Crypt::DES::crypt("AAAAAAAA", ".."), "..SttI9HzezEY");
@@ -225,14 +173,13 @@ TEST(DESCrypt3, Crypt) {
 
     ASSERT_EQ(Stf::Crypt::DES::crypt(".AAAAAAA", ".."), "..PxtcFr/TCPM");
     ASSERT_EQ(Stf::Crypt::DES::crypt("..AAAAAA", ".."), "..KwR2/fQaBZk");
-
-    // generate_crypt_tests();
 }
 
 TEST(DES, Tripcode) {
     ASSERT_EQ(Stf::Crypt::DES::tripcode("...AAAAA"), "BtNKI5JOy2");
     ASSERT_EQ(Stf::Crypt::DES::tripcode("AAAAAAAA"), "DLUg7SsaxM");
     ASSERT_EQ(Stf::Crypt::DES::tripcode("Hockeyhare"), "qSck1IAj6M");
+    ASSERT_EQ(Stf::Crypt::DES::tripcode("&&"), "sS3IIIdY12");
 }
 
 TEST(BitsliceDES, SBoxes) {

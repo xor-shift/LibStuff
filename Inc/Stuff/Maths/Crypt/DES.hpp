@@ -1,13 +1,14 @@
 #pragma once
 
+#include <ranges>
+
 #include <Stuff/Maths/Crypt/DES/Funcs.hpp>
 
 namespace Stf::Crypt::DES {
 
 namespace Detail {
 
-template<bool Reverse>
-constexpr uint64_t routine(uint64_t data, uint64_t key, PETableHB const& expansion_table = k_expansion_table) {
+template<bool Reverse> constexpr uint64_t routine(uint64_t data, uint64_t key, PETableHB const& expansion_table = k_expansion_table) {
     const auto input_permuted = Stf::permute_bits(data, k_initial_permutation_table);
     const auto round_keys = Detail::key_schedule(key);
 
@@ -33,6 +34,7 @@ constexpr uint64_t routine(uint64_t data, uint64_t key, PETableHB const& expansi
     const auto pre_permutation = (left << 32) | right;
     return Stf::permute_bits(pre_permutation, k_final_permutation_table);
 }
+
 constexpr std::array<uint64_t, 48> get_crypt_expansion_block(std::string_view salt) {
     auto ret = k_expansion_table;
 
@@ -66,7 +68,7 @@ constexpr std::string crypt_base64(std::string_view salt, uint64_t data) {
     ret.reserve(66);
 
     for (uint64_t i = 0; i < 64; i++) {
-        bits[i] = ((data >> (63-i)) & 1) != 0;
+        bits[i] = ((data >> (63 - i)) & 1) != 0;
     }
 
     for (auto i = 0uz; i < 11uz; i++) {
@@ -96,20 +98,49 @@ constexpr uint64_t get_crypt_key(std::string_view pw) {
     for (auto i = 0uz; i < std::min(pw.size(), 8uz); i++) {
         ret <<= 8;
         ret |= pw[i] & 0x7F;
-
-        /*for (uint8_t j = 0; j < 7; j++) {
-            ret <<= 1;
-            ret |= static_cast<uint64_t>((c >> (6 - j)) & 1);
-        }
-        ret <<= 1;*/
     }
     ret <<= 1;
-
-    //fmt::print("{:064b}\n", ret);
 
     ret = prepare_key(ret);
 
     return ret;
+}
+
+constexpr std::string_view get_tripkey(char (&output)[8], std::string_view raw_key) {
+    size_t size = 0;
+
+    auto push_str = [&](std::string_view s) {
+        const auto to_copy = std::min(s.size(), 8 - size);
+        std::copy_n(s.begin(), to_copy, output + size);
+        size += to_copy;
+    };
+
+    auto push_char = [&](char c) {
+        if (size == 8)
+            return;
+
+        std::pair<char, std::string_view> replacements[] {
+            { '&', "&amp;" },
+            { '>', "&gt;" },
+            { '<', "&lt" },
+            { '"', "&quot;" },
+        };
+
+        auto it = std::ranges::find_if(replacements, [c](auto v) { return v.first == c; });
+        if (it == replacements + 4) {
+            output[size++] = c;
+        } else {
+            push_str(it->second);
+        }
+    };
+
+    for (char c : raw_key) {
+        push_char(c);
+        if (size == 8)
+            break;
+    }
+
+    return { output, size };
 }
 
 }
@@ -146,7 +177,10 @@ constexpr std::string crypt(std::string_view pw, std::string_view salt) {
     return Detail::crypt_base64(salt, block);
 }
 
-constexpr std::string tripcode(std::string_view tripkey) {
+constexpr std::string tripcode(std::string_view raw_tripkey) {
+    char tripkey_data[8];
+    const auto tripkey = Detail::get_tripkey(tripkey_data, raw_tripkey);
+
     if (tripkey.empty())
         return "";
 

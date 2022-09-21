@@ -179,6 +179,8 @@ TEST(DES, Tripcode) {
     ASSERT_EQ(Stf::Crypt::DES::tripcode("...AAAAA"), "BtNKI5JOy2");
     ASSERT_EQ(Stf::Crypt::DES::tripcode("AAAAAAAA"), "DLUg7SsaxM");
     ASSERT_EQ(Stf::Crypt::DES::tripcode("Hockeyhare"), "qSck1IAj6M");
+    ASSERT_EQ(Stf::Crypt::DES::tripcode("AAAAAAA"), "V4n.MW5Rd2");
+    ASSERT_EQ(Stf::Crypt::DES::tripcode("A"), "hRJ9Ya./t.");
     ASSERT_EQ(Stf::Crypt::DES::tripcode("&&"), "sS3IIIdY12");
 }
 

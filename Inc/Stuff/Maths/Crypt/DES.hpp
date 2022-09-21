@@ -99,14 +99,15 @@ constexpr uint64_t get_crypt_key(std::string_view pw) {
         ret <<= 8;
         ret |= pw[i] & 0x7F;
     }
-    ret <<= 1;
+    ret <<= (65 - pw.size() * 8);
 
     ret = prepare_key(ret);
 
     return ret;
 }
 
-constexpr std::string_view get_tripkey(char (&output)[8], std::string_view raw_key) {
+template<size_t TripSize = 8, size_t SaltSuffixSize = 2, auto SaltSuffix = std::array<char, SaltSuffixSize> { 'H', '.' }>
+constexpr std::string_view get_tripkey(char (&output)[TripSize + SaltSuffixSize], std::string_view raw_key) {
     size_t size = 0;
 
     auto push_str = [&](std::string_view s) {
@@ -116,7 +117,7 @@ constexpr std::string_view get_tripkey(char (&output)[8], std::string_view raw_k
     };
 
     auto push_char = [&](char c) {
-        if (size == 8)
+        if (size == TripSize)
             return;
 
         std::pair<char, std::string_view> replacements[] {
@@ -136,8 +137,24 @@ constexpr std::string_view get_tripkey(char (&output)[8], std::string_view raw_k
 
     for (char c : raw_key) {
         push_char(c);
-        if (size == 8)
+        if (size == TripSize)
             break;
+    }
+
+    auto salt_transform = [](char c) -> char {
+        if (c >= ':' && c <= '@')
+            return 'A' + (c - ':');
+
+        if (c >= '[' && c <= '`')
+            return 'a' + (c - '[');
+
+        return c;
+    };
+
+    std::ranges::copy(SaltSuffix, output + size);
+
+    for (auto i = 0uz; i < SaltSuffixSize; i++) {
+        output[size + i] = salt_transform(output[i + 1]);
     }
 
     return { output, size };
@@ -178,39 +195,13 @@ constexpr std::string crypt(std::string_view pw, std::string_view salt) {
 }
 
 constexpr std::string tripcode(std::string_view raw_tripkey) {
-    char tripkey_data[8];
+    char tripkey_data[10];
     const auto tripkey = Detail::get_tripkey(tripkey_data, raw_tripkey);
 
     if (tripkey.empty())
         return "";
 
-    char salt[2];
-
-    if (tripkey.size() == 1) {
-        salt[0] = 'H';
-        salt[1] = '.';
-    } else if (tripkey.size() == 2) {
-        salt[0] = tripkey[1];
-        salt[1] = 'H';
-    } else {
-        salt[0] = tripkey[1];
-        salt[1] = tripkey[2];
-    }
-
-    auto salt_transform = [](char c) -> char {
-        if (c >= ':' && c <= '@')
-            return 'A' + (c - ':');
-
-        if (c >= '[' && c <= '`')
-            return 'a' + (c - '[');
-
-        return c;
-    };
-
-    salt[0] = salt_transform(salt[0]);
-    salt[1] = salt_transform(salt[1]);
-
-    auto trip = crypt(tripkey, { salt, 2 });
+    auto trip = crypt(tripkey, { tripkey_data + tripkey.size(), 2 });
 
     return trip.substr(3);
 }

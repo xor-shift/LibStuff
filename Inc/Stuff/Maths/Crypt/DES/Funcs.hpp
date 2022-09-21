@@ -4,7 +4,7 @@
 #include <Stuff/Maths/Crypt/DES/SBox.hpp>
 #include <Stuff/Maths/Crypt/DES/Tables.hpp>
 
-namespace Stf::Crypt::DES::Detail {
+namespace Stf::DES::Detail {
 
 // 64 to 56, discards parity
 constexpr uint64_t remove_key_parity(uint64_t key) {
@@ -103,38 +103,6 @@ constexpr std::array<uint64_t, 16> key_schedule(uint64_t key) {
     }
 
     return round_keys;
-}
-
-}
-
-namespace Stf::Crypt::DES::Detail {
-
-// test function
-template<bool MSBFirst = true> constexpr uint64_t sbox_transform_bitslice(uint64_t data) {
-    uint64_t input[48];
-    uint64_t output[32] = {};
-
-    for (uint64_t bit_idx = 0; bit_idx < 48; bit_idx++) {
-        uint64_t bit;
-        if constexpr (MSBFirst)
-            bit = (data >> (47 - bit_idx)) & 1;
-        else
-            bit = (data >> (47 - bit_idx)) & 1;
-        input[bit_idx] = bit != 0 ? 0xFFFF'FFFF'FFFF'FFFFul : 0ul;
-    }
-
-    Detail::Bitslice::X86::helper(input, output);
-
-    uint64_t ret = 0;
-    for (uint64_t bit_idx = 0; bit_idx < 32; bit_idx++) {
-        const uint64_t bits = output[bit_idx];
-
-        const uint64_t data_index = 13; // random
-        const uint64_t bit = ((bits >> data_index) & 1) << (31 - bit_idx);
-        ret |= bit;
-    }
-
-    return ret;
 }
 
 }

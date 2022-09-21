@@ -4,7 +4,7 @@
 
 #include <Stuff/Maths/Crypt/DES/Funcs.hpp>
 
-namespace Stf::Crypt::DES {
+namespace Stf::DES {
 
 namespace Detail {
 
@@ -170,6 +170,12 @@ constexpr uint64_t encrypt(uint64_t plaintext, uint64_t raw_key) {
 constexpr uint64_t decrypt(uint64_t ciphertext, uint64_t raw_key) {
     const auto key = Detail::prepare_key(raw_key);
     return Detail::routine<true>(ciphertext, key);
+}
+
+// bitslice help:
+// index 0 of any array is the LSB
+constexpr void encrypt_bitslice(std::span<uint64_t, 64> plaintext, std::span<uint64_t, 64>) {
+
 }
 
 // UNIX v7 crypt(3)

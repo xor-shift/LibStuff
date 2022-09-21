@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <limits>
 
-namespace Stf::Crypt::DES::Detail {
+namespace Stf::DES::Detail {
 
 using PTableInitial = std::array<uint64_t, 64>;
 using PTableFinal = std::array<uint64_t, 64>;

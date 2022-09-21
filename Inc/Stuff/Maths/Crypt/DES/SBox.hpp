@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-namespace Stf::Crypt::DES::Detail::Bitslice::X86 {
+namespace Stf::DES::Detail::Bitslice::X86 {
 
 // x([0-9]{1,2})
 // x[$1-1]

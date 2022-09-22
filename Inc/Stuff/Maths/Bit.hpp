@@ -89,9 +89,8 @@ template<typename T> constexpr T convert_endian(T v, std::endian from, std::endi
 
 namespace Detail {
 
-template<typename T>
-inline T permute_bits_sse(T val, auto const& lookup) {
-    //TODO: actually implement this
+template<typename T> inline T permute_bits_sse(T val, auto const& lookup) {
+    // TODO: actually implement this
     const auto full_cycles = std::size(lookup) / 16;
     const auto residual = std::size(lookup) % 16;
     const auto total_cycles = full_cycles + (residual ? 1 : 0);
@@ -131,6 +130,56 @@ template<typename T> constexpr T permute_bits(T val, auto const& lookup) {
     for (T i = 0; i < std::min<T>(std::size(lookup), std::numeric_limits<T>::digits); i++) {
         const auto set = get_bit(val, lookup[i]);
         ret = set_bit(ret, i, set);
+    }
+
+    return ret;
+}
+
+/// Pushes a number to a bitslice of 64 width
+/// \tparam Bits The number of bits per slice
+/// \tparam ToMSB Whether to push to the MSB of the slices
+/// \tparam MSB0 Whether to treat v's MSB bit as the index #0 for the slice
+/// \param slices 64 bit slices of Bits width
+/// \param v The value to push
+template<size_t Bits, bool ToMSB = false, bool MSB0 = true> constexpr void bitslice_push(uint64_t (&slices)[Bits], uint64_t v) {
+    for (auto i = 0uz; i < Bits; i++) {
+        auto& target = slices[i];
+        const auto b = MSB0                  //
+            ? (((v >> (Bits - 1)) & 1) != 0) //
+            : ((v & 1) != 0);
+
+        if constexpr (MSB0)
+            v <<= 1;
+        else
+            v >>= 1;
+
+        if constexpr (ToMSB) {
+            target >>= 1;
+            target |= b * (1ul << 63);
+        } else {
+            target <<= 1;
+            target |= b;
+        }
+    }
+}
+
+// use inverse second parameter to push to achieve a "queue"
+template<size_t Bits, bool FromMSB = false, bool MSB0 = true> constexpr uint64_t bitslice_pop(uint64_t (&slices)[Bits]) {
+    uint64_t ret = 0;
+
+    for (auto i = 0uz; i < Bits; i++) {
+        auto& source = slices[MSB0 ? i : Bits - i - 1];
+        const auto b = FromMSB              //
+            ? ((source & (1ul << 63)) != 0) //
+            : ((source & 1) != 0);
+
+        if constexpr (FromMSB)
+            source <<= 1;
+        else
+            source >>= 1;
+
+        ret <<= 1;
+        ret |= b;
     }
 
     return ret;

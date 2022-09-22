@@ -179,7 +179,7 @@ TEST(DESCrypt3, Crypt) {
     ASSERT_EQ(Stf::DES::crypt("..AAAAAA", ".."), "..KwR2/fQaBZk");
 }
 
-TEST(DES, Tripcode) {
+TEST(DESCrypt3, Tripcode) {
     ASSERT_EQ(Stf::DES::tripcode("...AAAAA"), "BtNKI5JOy2");
     ASSERT_EQ(Stf::DES::tripcode("AAAAAAAA"), "DLUg7SsaxM");
     ASSERT_EQ(Stf::DES::tripcode("Hockeyhare"), "qSck1IAj6M");
@@ -272,27 +272,14 @@ TEST(BitsliceDES, SBoxesFullMulti) {
             auto v = dist(s_engine);
             val_arr[j] = v;
 
-            for (auto k = 0uz; k < 48; k++) {
-                auto& target = input[47 - k];
-                target <<= 1;
-                target |= (v & 1) != 0 ? 1 : 0;
-                v >>= 1;
-            }
+            Stf::bitslice_push(input, v);
         }
 
         Stf::DES::Detail::Bitslice::X86::helper(input, output);
 
         for (auto j = 0uz; j < 64; j++) {
             const auto expected = Stf::DES::Detail::sbox_transform_lookup(val_arr[63 - j]);
-            uint64_t got = 0;
-
-            for (auto k = 0uz; k < 32; k++) {
-                auto& source = output[k];
-
-                got <<= 1;
-                got |= (source & 1) != 0 ? 1 : 0;
-                source >>= 1;
-            }
+            const auto got = Stf::bitslice_pop(output);
 
             ASSERT_EQ(expected, got) << fmt::format("expected, got: {:016X}, {:016X}", expected, got);
         }

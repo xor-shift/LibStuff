@@ -1,6 +1,13 @@
 #include <gtest/gtest.h>
 
+#include <random>
+
+#include <fmt/format.h>
+
 #include <Stuff/Maths/Bit.hpp>
+
+static std::random_device s_rd {};
+static std::mt19937_64 s_engine { s_rd() };
 
 TEST(Bit, Bit) {
     ASSERT_EQ(Stf::reverse_bits(0x04c11db7u), 0xedb88320u);
@@ -27,4 +34,39 @@ TEST(Bit, Bit) {
 
     for (const auto [v, expected] : permutation_vector_0)
         ASSERT_EQ(Stf::permute_bits(v, lookup_0), expected);
+}
+
+TEST(Bit, Bitslice) {
+    std::uniform_int_distribution<uint64_t> gen_48{0ul, 0xFFFF'FFFF'FFFFul};
+    std::uniform_int_distribution<uint64_t> gen_32{0ul, 0xFFFF'FFFFul};
+
+    for (auto i = 0uz; i < 64; i++) {
+        uint64_t values[64];
+        uint64_t config_0[48] {};
+        uint64_t config_1[48] {};
+        uint64_t config_2[48] {};
+        uint64_t config_3[48] {};
+
+        for (auto& v_target : values) {
+            const auto v = gen_48(s_engine);
+            v_target = v;
+
+            Stf::bitslice_push<48, false, false>(config_0, v);
+            Stf::bitslice_push<48, false, true>(config_1, v);
+            Stf::bitslice_push<48, true, false>(config_2, v);
+            Stf::bitslice_push<48, true, true>(config_3, v);
+        }
+
+        for (const auto expected : values) {
+            const auto c_0_res = Stf::bitslice_pop<48, true, false>(config_0);
+            const auto c_1_res = Stf::bitslice_pop<48, true, true>(config_1);
+            const auto c_2_res = Stf::bitslice_pop<48, false, false>(config_2);
+            const auto c_3_res = Stf::bitslice_pop<48, false, true>(config_3);
+
+            ASSERT_EQ(expected, c_0_res) << fmt::format("expected: {:064b}\ngot     : {:064b}", expected, c_0_res);
+            ASSERT_EQ(expected, c_1_res) << fmt::format("expected: {:064b}\ngot     : {:064b}", expected, c_1_res);
+            ASSERT_EQ(expected, c_2_res) << fmt::format("expected: {:064b}\ngot     : {:064b}", expected, c_2_res);
+            ASSERT_EQ(expected, c_3_res) << fmt::format("expected: {:064b}\ngot     : {:064b}", expected, c_3_res);
+        }
+    }
 }

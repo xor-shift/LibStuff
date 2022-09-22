@@ -101,8 +101,6 @@ constexpr uint64_t get_crypt_key(std::string_view pw) {
     }
     ret <<= (65 - pw.size() * 8);
 
-    ret = prepare_key(ret);
-
     return ret;
 }
 
@@ -172,11 +170,7 @@ constexpr uint64_t decrypt(uint64_t ciphertext, uint64_t raw_key) {
     return Detail::routine<true>(ciphertext, key);
 }
 
-// bitslice help:
-// index 0 of any array is the LSB
-constexpr void encrypt_bitslice(std::span<uint64_t, 64> plaintext, std::span<uint64_t, 64>) {
-
-}
+constexpr void encrypt_bitslice(std::span<uint64_t, 64> plaintext, std::span<uint64_t, 64> key) { }
 
 // UNIX v7 crypt(3)
 constexpr std::string crypt(std::string_view pw, std::string_view salt) {
@@ -190,7 +184,8 @@ constexpr std::string crypt(std::string_view pw, std::string_view salt) {
         pw = pw.substr(0, 8);
 
     const auto expansion_table = Detail::get_crypt_expansion_block(salt);
-    const auto key = Detail::get_crypt_key(pw);
+    const auto raw_key = Detail::get_crypt_key(pw);
+    const auto key = Detail::prepare_key(raw_key);
 
     uint64_t block = 0;
 

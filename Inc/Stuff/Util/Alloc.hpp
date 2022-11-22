@@ -18,7 +18,6 @@ template<> struct BumpAllocator<std::byte> {
 
     std::span<std::byte> m_pool;
 
-    mutable std::mutex m_mutex {};
     size_t m_allocated = 0;
     size_t m_discarded = 0;
 

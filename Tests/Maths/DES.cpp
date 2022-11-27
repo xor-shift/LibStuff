@@ -227,7 +227,7 @@ TEST(BitsliceDES, SBoxesIndividual) {
 }
 
 TEST(BitsliceDES, SBoxesFullSingle) {
-    std::uniform_int_distribution<uint64_t> dist{0ul, 0xFFFF'FFFF'FFFFul};
+    std::uniform_int_distribution<uint64_t> dist { 0ul, 0xFFFF'FFFF'FFFFul };
 
     for (auto i = 0uz; i < 512uz; i++) {
         const auto v = dist(s_engine);
@@ -260,7 +260,7 @@ TEST(BitsliceDES, SBoxesFullSingle) {
 }
 
 TEST(BitsliceDES, SBoxesFullMulti) {
-    std::uniform_int_distribution<uint64_t> dist{0ul, 0xFFFF'FFFF'FFFFul};
+    std::uniform_int_distribution<uint64_t> dist { 0ul, 0xFFFF'FFFF'FFFFul };
 
     for (auto i = 0uz; i < 512; i++) {
         uint64_t input[48];
@@ -286,4 +286,48 @@ TEST(BitsliceDES, SBoxesFullMulti) {
     }
 }
 
-TEST(BitsliceDES, Single) { }
+TEST(BitsliceDES, Permutation) {
+    std::uniform_int_distribution<uint64_t> dist { 0ul, 0xFFFF'FFFF'FFFF'FFFFul };
+
+    for (auto i = 0uz; i < 512; i++) {
+        uint64_t perm_arr[64] {};
+        std::array<uint64_t, 64> val_arr;
+
+        for (auto j = 0uz; j < 64; j++) {
+            auto v = dist(s_engine);
+            val_arr[j] = v;
+
+            Stf::bitslice_push(perm_arr, v);
+        }
+
+        auto const& table = Stf::DES::Detail::k_initial_permutation_table;
+
+        Stf::permute_elements(perm_arr, table);
+
+        for (auto j = 0uz; j < 64; j++) {
+            const auto expected = Stf::permute_bits(val_arr[63 - j], table);
+            const auto got = Stf::bitslice_pop(perm_arr);
+
+            ASSERT_EQ(expected, got) << fmt::format("expected: {:064b}\ngot     : {:064b}", expected, got);
+        }
+    }
+}
+
+TEST(BitsliceDES, Single) {
+    std::uniform_int_distribution<uint64_t> dist { 0ul, 0xFFFF'FFFF'FFFFul };
+
+    uint64_t key = dist(s_engine);
+    uint64_t plaintext = dist(s_engine);
+
+    const auto expected_key_schedule = Stf::DES::Detail::key_schedule(key);
+
+    uint64_t key_bitslice[56];
+    uint64_t plaintext_bitslice[64];
+
+    Stf::bitslice_push(key_bitslice, key);
+    Stf::bitslice_push(plaintext_bitslice, plaintext);
+
+    for (auto i = 0uz; i < expected_key_schedule.size(); i++) {
+
+    }
+}

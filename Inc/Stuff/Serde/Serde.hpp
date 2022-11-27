@@ -1,25 +1,47 @@
 #pragma once
 
-#include <optional>
+#include <Stuff/Util/Hacks/Concepts.hpp>
+#include <Stuff/Util/Hacks/Expected.hpp>
+#include <Stuff/Util/Hacks/Try.hpp>
+
+#include <concepts>
 #include <span>
-#include <variant>
+#include <string_view>
+#include <type_traits>
 
-#include <Stuff/Serde/Refl/Refl.hpp>
+/*template<typename Serializer>
+constexpr std::expected<void, std::string_view> _libstf_adl_serializer(Serializer& serializer, bool v) {
+    return serializer.serialize_bool(v);
+}*/
 
-#include "./BasicSerializers.hpp"
-
-namespace Stf::Serde::New {
-
-template<typename T, Adapter A>
-constexpr void serialize(T const& v, A& adapter) {
-    auto serializer = adapter.make_serializer();
-    serialize(v, serializer);
+template<typename Serializer, std::integral T>
+    requires(!std::is_same_v<T, bool>) && (!std::is_same_v<T, char>)
+constexpr std::expected<void, std::string_view> _libstf_adl_serializer(Serializer& serializer, T v) {
+    return serializer.serialize_integral(v);
 }
 
-template<typename T, Adapter A>
-constexpr void deserialize_into(T& v, A& adapter) {
-    auto deserializer = adapter.make_deserializer();
-    deserialize(v, deserializer);
+template<typename Serializer>
+constexpr std::expected<void, std::string_view> _libstf_adl_serializer(Serializer& serializer, std::span<uint8_t> v) {
+    return serializer.serialize_bytes(v);
+}
+
+template<typename Serializer>
+constexpr std::expected<void, std::string_view> _libstf_adl_serializer(Serializer& serializer, char v) {
+    return serializer.serialize_char(v);
+}
+
+template<typename Serializer>
+constexpr std::expected<void, std::string_view>
+_libstf_adl_serializer(Serializer& serializer, std::basic_string_view<char> str) {
+    return serializer.serialize_str(str);
+}
+
+namespace Stf {
+
+template<typename Serializer, typename T>
+    requires(requires(Serializer& serializer, T const& v) { _libstf_adl_serializer(serializer, v); })
+constexpr auto serialize(Serializer& serializer, T const& v) {
+    return _libstf_adl_serializer(serializer, v);
 }
 
 }

@@ -3,19 +3,15 @@
 #include <Stuff/Maths/Scalar.hpp>
 #include <Stuff/Maths/BLAS/Vector.hpp>
 #include <Stuff/Maths/Fmt.hpp>
-#include <Stuff/Refl/ReflNew.hpp>
 
 TEST(Vector, BasicExpressions) {
     const auto vec_0 = Stf::vector<float>(1.f, 2.f, 3.f);
     auto vec_1 = Stf::vector<float>(1.f, 1.f, -0.5f);
 
-    //asd<std::tuple_element_t<0, decltype(vec_0)>>();
-
     ASSERT_EQ(std::tuple_size_v<decltype(vec_0)>, 3);
     ASSERT_TRUE((std::is_same_v<std::tuple_element_t<0, decltype(vec_0)>, const float>));
     ASSERT_TRUE((std::is_same_v<std::tuple_element_t<1, decltype(vec_0)>, const float>));
     ASSERT_TRUE((std::is_same_v<std::tuple_element_t<2, decltype(vec_0)>, const float>));
-    ASSERT_EQ(Stf::Refl::get<0>(vec_0), 1.f);
     ASSERT_EQ(get<1>(vec_0), 2.f);
     ASSERT_EQ(get<2>(vec_0), 3.f);
 

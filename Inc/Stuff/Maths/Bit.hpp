@@ -5,6 +5,7 @@
 #include <climits>
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <type_traits>
 
 #include <immintrin.h>
@@ -135,6 +136,22 @@ template<typename T> constexpr T permute_bits(T val, auto const& lookup) {
     return ret;
 }
 
+template<typename T, size_t N, bool SliceMSB0 = true, bool LookupMSB0 = false> constexpr void permute_elements(std::span<T, N> arr, auto const& lookup) {
+    T temporary[N];
+
+    for (auto i = 0uz; i < N; i++) {
+        auto const& src = arr[N - lookup[N - i - 1] - 1];
+        auto& dst = temporary[i];
+        dst = src;
+    }
+
+    std::ranges::copy(temporary, arr.begin());
+}
+
+template<typename T, size_t N, bool SliceMSB0 = true, bool LookupMSB0 = false> constexpr void permute_elements(T (&arr)[N], auto const& lookup) {
+    return permute_elements(std::span<T, N> { arr, arr + N }, lookup);
+}
+
 /// Pushes a number to a bitslice of 64 width
 /// \tparam Bits The number of bits per slice
 /// \tparam ToMSB Whether to push to the MSB of the slices
@@ -163,7 +180,6 @@ template<size_t Bits, bool ToMSB = false, bool MSB0 = true> constexpr void bitsl
     }
 }
 
-// use inverse second parameter to push to achieve a "queue"
 template<size_t Bits, bool FromMSB = false, bool MSB0 = true> constexpr uint64_t bitslice_pop(uint64_t (&slices)[Bits]) {
     uint64_t ret = 0;
 

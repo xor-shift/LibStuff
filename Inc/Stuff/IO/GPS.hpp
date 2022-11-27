@@ -12,35 +12,28 @@
 #include <tuple>
 
 #include <Stuff/Maths/Scalar.hpp>
-#include <Stuff/Refl/ReflNew.hpp>
 #include <Stuff/Util/Conv.hpp>
 
 namespace Stf::GPS {
 
 struct Time {
-    MEMREFL_BEGIN(Time, 4);
-
-    int MEMREFL_DECL_MEMBER(hh);
-    int MEMREFL_DECL_MEMBER(mm);
-    int MEMREFL_DECL_MEMBER(ss);
-    int MEMREFL_DECL_MEMBER(sss);
+    int hh;
+    int mm;
+    int ss;
+    int sss;
 };
 
 struct Date {
-    MEMREFL_BEGIN(Date, 3);
-
-    int MEMREFL_DECL_MEMBER(dd);
-    int MEMREFL_DECL_MEMBER(mm);
-    int MEMREFL_DECL_MEMBER(yy);
+    int dd;
+    int mm;
+    int yy;
 };
 
 struct Angle {
-    MEMREFL_BEGIN(Angle, 4);
-
-    int MEMREFL_DECL_MEMBER(degrees);
-    int MEMREFL_DECL_MEMBER(minutes);
-    int MEMREFL_DECL_MEMBER(minutes_decimal_digits);
-    int MEMREFL_DECL_MEMBER(minutes_decimal);
+    int degrees;
+    int minutes;
+    int minutes_decimal_digits;
+    int minutes_decimal;
 
     constexpr float as_degrees() const {
         float decimal_mult;
@@ -69,19 +62,17 @@ enum class Direction : int {
 };
 
 struct GPSState {
-    MEMREFL_BEGIN(GPSState, 5)
+    std::optional<Time> time;
 
-    std::optional<Time> MEMREFL_DECL_MEMBER(time);
-
-    std::optional<Date> MEMREFL_DECL_MEMBER(date);
+    std::optional<Date> date;
 
     // latitude, longitude
-    std::optional<std::pair<Angle, Angle>> MEMREFL_DECL_MEMBER(location);
+    std::optional<std::pair<Angle, Angle>> location;
 
     // ns, ew
-    std::optional<std::pair<Direction, Direction>> MEMREFL_DECL_MEMBER(direction);
+    std::optional<std::pair<Direction, Direction>> direction;
 
-    size_t MEMREFL_DECL_MEMBER(connected_satellites);
+    size_t connected_satellites;
 
     void feed_line(std::string_view line);
 

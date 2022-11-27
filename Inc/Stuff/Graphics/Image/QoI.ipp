@@ -62,6 +62,7 @@ constexpr size_t extra_data_size(BlockType type) {
     case BlockType::Luma: return 1;
     case BlockType::Run: return 0;
     }
+    std::unreachable();
 }
 
 enum class Channels {

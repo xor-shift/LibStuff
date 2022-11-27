@@ -50,6 +50,14 @@ template<typename T> constexpr T rotl(T v, T bits, T n) {
     return shifted | carried;
 }
 
+template<typename T, size_t N, bool MSB0 = true> constexpr void rotl(std::span<T, N> arr, size_t n) {
+    for (auto i = 0uz; i < N; i++) {
+        const auto j = (i + n) % N;
+        using std::swap;
+        swap(arr[i], arr[j]);
+    }
+}
+
 // 56 to 56 and 48, turns subkey_(n-1) to subkey_n_
 constexpr std::pair<uint64_t, uint64_t> subkey_n(uint64_t key, uint64_t round, PTablePC2 const& pc_2 = k_key_sched_pc_2) {
     const auto left_key = (key >> 28) & 0xFFFFFFF;

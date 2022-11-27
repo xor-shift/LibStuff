@@ -129,7 +129,9 @@ template<typename T, Concepts::VectorExpression E> constexpr Detail::CastExpress
         return { e.e, e.s + static_cast<typename T::value_Type>(v), {} };                                                                            \
     }                                                                                                                                                \
                                                                                                                                                      \
-    template<Concepts::VectorExpression E, typename T> constexpr Detail::VectorScalar##EXPR_NAME##Expression<E> operator EXPR_SYM(T v, E const& e) { \
+    template<Concepts::VectorExpression E, typename T>                                                                                               \
+    requires std::convertible_to<T, typename E::value_type>                                                                                          \
+    constexpr Detail::VectorScalar##EXPR_NAME##Expression<E> operator EXPR_SYM(T v, E const& e) {                                                    \
         return operator EXPR_SYM(e, v);                                                                                                              \
     }
 

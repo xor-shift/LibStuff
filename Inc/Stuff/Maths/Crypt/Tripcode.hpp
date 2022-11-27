@@ -1,0 +1,8 @@
+//
+// Created by reisen on 9/21/22.
+//
+
+#ifndef INC_STUFF_MATHS_CRYPT_DES_TRIPCODE_H
+#define INC_STUFF_MATHS_CRYPT_DES_TRIPCODE_H
+
+#endif // INC_STUFF_MATHS_CRYPT_DES_TRIPCODE_H

@@ -148,7 +148,7 @@ inline constexpr std::array<std::array<uint64_t, 64>, 8> k_sub_tables {
     }),
 };
 
-// F function final permutation P box
+// 32 to 32, F function final permutation P box
 inline constexpr auto k_f_final_p_table = permutation_table<uint64_t>(
     {
         16, 7, 20, 21, 29, 12, 28, 17, //

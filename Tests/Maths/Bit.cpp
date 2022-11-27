@@ -5,6 +5,7 @@
 #include <fmt/format.h>
 
 #include <Stuff/Maths/Bit.hpp>
+#include <Stuff/Maths/Crypt/DES/Tables.hpp>
 
 static std::random_device s_rd {};
 static std::mt19937_64 s_engine { s_rd() };
@@ -14,9 +15,9 @@ TEST(Bit, Bit) {
 
     uint8_t lookup_0[] = { 6, 1, 3, 7, 0, 4, 5, 2 };
     std::pair<uint8_t, uint8_t> permutation_vector_0[] {
-        { 0xFF, 0xFF },
-        { 0xAA, 0x72 },
-        { 0x55, 0x72 },
+        { 0xFF, 0xFF }, //
+        { 0xAA, 0x72 }, //
+        { 0x55, 0x72 }, //
 
         /*{ 0xA1, 0x },
         { 0x2F, 0x },
@@ -37,10 +38,10 @@ TEST(Bit, Bit) {
 }
 
 TEST(Bit, Bitslice) {
-    std::uniform_int_distribution<uint64_t> gen_48{0ul, 0xFFFF'FFFF'FFFFul};
-    std::uniform_int_distribution<uint64_t> gen_32{0ul, 0xFFFF'FFFFul};
+    std::uniform_int_distribution<uint64_t> gen_48 { 0ul, 0xFFFF'FFFF'FFFFul };
+    std::uniform_int_distribution<uint64_t> gen_32 { 0ul, 0xFFFF'FFFFul };
 
-    for (auto i = 0uz; i < 64; i++) {
+    for (auto i = 0uz; i < 512; i++) {
         uint64_t values[64];
         uint64_t config_0[48] {};
         uint64_t config_1[48] {};
@@ -68,5 +69,28 @@ TEST(Bit, Bitslice) {
             ASSERT_EQ(expected, c_2_res) << fmt::format("expected: {:064b}\ngot     : {:064b}", expected, c_2_res);
             ASSERT_EQ(expected, c_3_res) << fmt::format("expected: {:064b}\ngot     : {:064b}", expected, c_3_res);
         }
+    }
+}
+
+TEST(Bit, PermuteElems) {
+    std::uniform_int_distribution<uint64_t> gen_32 { 0ul, 0xFFFF'FFFFul };
+    using Stf::DES::Detail::k_f_final_p_table;
+
+    for (auto i = 0uz; i < 512; i++) {
+        static constexpr uint64_t one = 0xFFFF'FFFF'FFFF'FFFFul;
+        const auto v = gen_32(s_engine);
+
+        const auto expected = Stf::permute_bits(v, k_f_final_p_table);
+
+        uint64_t arr[32];
+        for (auto i = 0uz; i < 32; i++) {
+            arr[i] = ((v >> (31 - i)) & 1) != 0 ? one : 0;
+        }
+
+        Stf::permute_elements(arr, k_f_final_p_table);
+
+        const auto got = Stf::bitslice_pop(arr);
+
+        ASSERT_EQ(expected, got);
     }
 }

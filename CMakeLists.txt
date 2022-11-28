@@ -13,6 +13,8 @@ if (${CMAKE_BUILD_TYPE} STREQUAL "Debug" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWit
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address -fsanitize=undefined")
 endif()
 
+add_subdirectory(Thirdparty/expected)
+
 add_library(${PROJECT_NAME})
 
 target_include_directories(${PROJECT_NAME} PUBLIC Inc)
@@ -25,6 +27,8 @@ target_sources(${PROJECT_NAME} PUBLIC
         Src/Util/CPUID/Features.cpp
         Src/Util/MMap.cpp
         )
+
+target_link_libraries(${PROJECT_NAME} PUBLIC expected)
 
 if (LibStuffUseFMT)
     target_link_libraries(${PROJECT_NAME} PUBLIC fmt)

@@ -26,18 +26,18 @@ template<typename T, typename... Ts> constexpr std::size_t multi_hash(const T& v
 
 namespace std {
 
-template<typename T, typename U> struct hash<std::pair<T, U>> {
+template<typename T, typename U> struct hash<pair<T, U>> { // NOLINT(cert-dcl58-cpp)
     using argument_type = pair<T, U>;
     using result_type = size_t;
 
     constexpr result_type operator()(argument_type const& v) const {
         const auto lhs = hash<T> {}(v.first);
-        const auto rhs = hash<T> {}(v.second);
+        const auto rhs = hash<U> {}(v.second);
         return ::Stf::hash_combine(lhs, rhs);
     }
 };
 
-template<typename... Ts> struct hash<std::tuple<Ts...>> {
+template<typename... Ts> struct hash<tuple<Ts...>> { // NOLINT(cert-dcl58-cpp)
     using argument_type = tuple<Ts...>;
     using result_type = size_t;
 
@@ -53,8 +53,7 @@ private:
     }
 };
 
-template<typename T, size_t N>
-struct hash<array<T, N>> {
+template<typename T, size_t N> struct hash<array<T, N>> { // NOLINT(cert-dcl58-cpp)
     using argument_type = array<T, N>;
     using result_type = size_t;
 

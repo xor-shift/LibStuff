@@ -5,12 +5,12 @@
 #include <Stuff/Util/Hacks/Try.hpp>
 
 #include <algorithm>
+#include <charconv>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <numeric>
 #include <optional>
-#include <ranges>
 #include <span>
 #include <unordered_map>
 #include <vector>
@@ -117,29 +117,6 @@ constexpr auto windowed_foreach(size_t window_size, std::span<T> vals, Fn&& fn) 
 
 template<typename T, typename Fn> constexpr auto windowed_foreach(size_t window_size, T&& container, Fn&& fn) {
     return Detail::windowed_foreach(window_size, std::span(container.data(), container.size()), std::forward<Fn>(fn));
-}
-
-template<typename T, typename Fn> constexpr auto foreach(T&& container, Fn&& fn) {
-    return Detail::windowed_foreach(1, std::span(container.data(), container.size()), std::forward<Fn>(fn));
-}
-
-//TODO
-template<typename It, typename Fn> constexpr auto windowed_foreach(size_t window_size, It begin, It end, Fn&& fn) {
-    std::vector<It> window(window_size, end);
-
-    const auto slide_window = [&window] {
-        for (size_t i = 0; i < window.size() - 1; i++) {
-            using std::swap;
-            swap(window[i], window[i + 1]);
-        }
-    };
-
-    const auto vals_size = distance(begin, end);
-    auto it = begin;
-    for (size_t i = 0; i < vals_size + window_size; i++) {
-        slide_window();
-        window.back() = it++;
-    }
 }
 
 }

@@ -25,11 +25,11 @@ struct MMapStringView {
 
     constexpr size_t size() const noexcept { return m_filesize; }
 
-    explicit operator std::string_view() const noexcept { return { data(), data() + size() }; }
+    operator std::string_view() const noexcept { return { data(), data() + size() }; }
 
-    explicit operator std::span<const char>() const noexcept { return { data(), data() + size() }; }
+    operator std::span<const char>() const noexcept { return { data(), data() + size() }; }
 
-    explicit operator std::span<char>() { return { data(), data() + size() }; }
+    operator std::span<char>() { return { data(), data() + size() }; }
 
 private:
     std::string m_filename;

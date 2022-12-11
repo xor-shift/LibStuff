@@ -42,8 +42,6 @@ if (LibStuffCompileTests)
     add_subdirectory(Thirdparty/googletest)
 
     add_executable(${PROJECT_NAME}_tests
-            Tests/Competition/Comp.cpp
-
             Tests/Graphics/Image.cpp
 
             Tests/Intro/Intro.cpp

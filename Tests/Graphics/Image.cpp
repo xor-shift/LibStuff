@@ -37,20 +37,20 @@ template<typename Allocator = std::allocator<uint8_t>> constexpr uint32_t image_
 }
 
 template<typename IIter, typename Allocator = std::allocator<uint8_t>>
-constexpr std::expected<Stf::Gfx::Image<Allocator>, std::string_view> decode_and_validate(IIter begin, IIter end, uint32_t expected_cksum) {
+constexpr tl::expected<Stf::Gfx::Image<Allocator>, std::string_view> decode_and_validate(IIter begin, IIter end, uint32_t expected_cksum) {
     auto decoded = TRYX(Stf::Gfx::Formats::QoI::decode(begin, end));
 
     if (const auto cksum = image_checksum<Allocator>(decoded); cksum != expected_cksum)
-        return std::unexpected { "Invalid image checksum" };
+        return tl::unexpected { "Invalid image checksum" };
 
     return decoded;
 }
 
 template<typename Allocator = std::allocator<uint8_t>>
-static std::expected<Stf::Gfx::Image<Allocator>, std::string_view> decode_and_validate(const char* file, uint32_t expected_cksum) {
+static tl::expected<Stf::Gfx::Image<Allocator>, std::string_view> decode_and_validate(const char* file, uint32_t expected_cksum) {
     std::ifstream ifs(file, std::ios::binary);
     if (!ifs)
-        return std::unexpected { "Failed to open file" };
+        return tl::unexpected { "Failed to open file" };
     return decode_and_validate<std::istreambuf_iterator<char>, Allocator>(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>(), expected_cksum);
 }
 

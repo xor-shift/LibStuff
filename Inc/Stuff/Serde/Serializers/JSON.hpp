@@ -24,7 +24,7 @@ template<typename Stream> struct Serializer {
     using ok_type = void;
     using error_type = std::string_view;
 
-    using result_type = std::expected<ok_type, error_type>;
+    using result_type = tl::expected<ok_type, error_type>;
 
     using array_serializer = Detail::ListSerializer<Stream>;
     using list_serializer = Detail::ListSerializer<Stream>;
@@ -45,11 +45,11 @@ template<typename Stream> struct Serializer {
     template<typename Char, typename Traits = std::char_traits<Char>>
     constexpr result_type serialize_str(std::basic_string_view<Char, Traits> str);
 
-    template<size_t Size> constexpr std::expected<array_serializer, error_type> serialize_array();
+    template<size_t Size> constexpr tl::expected<array_serializer, error_type> serialize_array();
 
-    constexpr std::expected<list_serializer, error_type> serialize_list(std::optional<size_t> length);
+    constexpr tl::expected<list_serializer, error_type> serialize_list(std::optional<size_t> length);
 
-    template<size_t Size> constexpr std::expected<tuple_serializer, error_type> serialize_tuple();
+    template<size_t Size> constexpr tl::expected<tuple_serializer, error_type> serialize_tuple();
 };
 
 namespace Detail {
@@ -63,9 +63,9 @@ template<typename Stream> struct ListSerializer {
     using ok_type = void;
     using error_type = std::string_view;
 
-    using result_type = std::expected<ok_type, error_type>;
+    using result_type = tl::expected<ok_type, error_type>;
 
-    template<typename T> constexpr std::expected<void, std::string_view> serialize_element(T const& v) {
+    template<typename T> constexpr tl::expected<void, std::string_view> serialize_element(T const& v) {
         if (!m_empty)
             m_stream << ", ";
         m_empty = false;
@@ -93,7 +93,7 @@ constexpr typename Serializer<Stream>::result_type Serializer<Stream>::serialize
     const auto res = std::to_chars(buf.data(), buf.data() + buf.size(), v, format);
 
     if (res.ec != std::errc())
-        return std::unexpected("failed to format floating point value");
+        return tl::unexpected("failed to format floating point value");
 
     std::span<char> fmt_chars(buf.data(), res.ptr);
 
@@ -137,20 +137,20 @@ Serializer<Stream>::serialize_str(std::basic_string_view<Char, Traits> str) {
 
 template<typename Stream>
 template<size_t Size>
-constexpr std::expected<typename Serializer<Stream>::array_serializer, typename Serializer<Stream>::error_type>
+constexpr tl::expected<typename Serializer<Stream>::array_serializer, typename Serializer<Stream>::error_type>
 Serializer<Stream>::serialize_array() {
     return list_serializer { stream };
 }
 
 template<typename Stream>
-constexpr std::expected<typename Serializer<Stream>::list_serializer, typename Serializer<Stream>::error_type>
+constexpr tl::expected<typename Serializer<Stream>::list_serializer, typename Serializer<Stream>::error_type>
 Serializer<Stream>::serialize_list(std::optional<size_t>) {
     return list_serializer { stream };
 }
 
 template<typename Stream>
 template<size_t Size>
-constexpr std::expected<typename Serializer<Stream>::tuple_serializer, typename Serializer<Stream>::error_type>
+constexpr tl::expected<typename Serializer<Stream>::tuple_serializer, typename Serializer<Stream>::error_type>
 Serializer<Stream>::serialize_tuple() {
     return list_serializer { stream };
 }

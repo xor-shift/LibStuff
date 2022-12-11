@@ -27,7 +27,7 @@ struct Baz {
 namespace Foo {
 
 template<typename Serializer>
-constexpr std::expected<void, std::string_view> _libstf_adl_serializer(Serializer& serializer, Bar const& v) {
+constexpr tl::expected<void, std::string_view> _libstf_adl_serializer(Serializer& serializer, Bar const& v) {
     auto tup_ser = TRYX(serializer.template serialize_tuple<4>());
 
     TRYX(tup_ser.serialize_element(v.a));
@@ -40,7 +40,7 @@ constexpr std::expected<void, std::string_view> _libstf_adl_serializer(Serialize
     return {};
 }
 
-template<typename Serializer> constexpr std::expected<void, std::string_view> _libstf_adl_serializer(Serializer& serializer, Baz const& v) {
+template<typename Serializer> constexpr tl::expected<void, std::string_view> _libstf_adl_serializer(Serializer& serializer, Baz const& v) {
     auto tup_ser = TRYX(serializer.template serialize_tuple<3>());
 
     TRYX(tup_ser.serialize_element(v.a));
@@ -58,7 +58,7 @@ TEST(Serde, JSON) {
     std::string str {};
     std::ostringstream oss(str);
     Stf::Serde::JSON::Serializer<std::ostringstream> ser { oss };
-    *Stf::serialize(ser, Foo::Baz {});
+    ASSERT_TRUE(Stf::serialize(ser, Foo::Baz {}).has_value());
     oss.flush();
     fmt::print("{}\n", oss.str());
 }

@@ -20,25 +20,25 @@ struct Message {
     uint8_t given_cksum;
     uint8_t calculated_cksum;
 
-    static std::expected<Message, std::string_view> create_from_sv(std::string_view sentence) {
+    static tl::expected<Message, std::string_view> create_from_sv(std::string_view sentence) {
         if (sentence.ends_with("\r\n"))
             sentence.remove_suffix(2);
 
         if (sentence.size() < 4)
-            return std::unexpected { "Sentence is too small" };
+            return tl::unexpected { "Sentence is too small" };
 
         if (sentence[0] != '$')
-            return std::unexpected { "Sentence does not start with an adequate prefix" };
+            return tl::unexpected { "Sentence does not start with an adequate prefix" };
         sentence.remove_prefix(1);
 
         if (sentence[sentence.size() - 3] != '*')
-            return std::unexpected { "Sentence does not have a prefix delimiter" };
+            return tl::unexpected { "Sentence does not have a prefix delimiter" };
 
         const auto cksum_str = sentence.substr(sentence.size() - 2);
         const auto cksum_opt = Stf::fast_hex_sv_to_int<uint8_t, true>(cksum_str);
 
         if (!cksum_opt)
-            return std::unexpected { "Sentence checksum mismatch" };
+            return tl::unexpected { "Sentence checksum mismatch" };
 
         sentence.remove_suffix(3);
 
@@ -81,9 +81,9 @@ namespace Detail {
 
 /// Parses time in the format: hhmmss.sss\n
 /// The character at the position of the dot does not matter
-std::expected<Time, std::string_view> parse_utc_time(std::string_view segment) {
+tl::expected<Time, std::string_view> parse_utc_time(std::string_view segment) {
     if (segment.size() != 9)
-        return std::unexpected { "String too small for a UTC time value" };
+        return tl::unexpected { "String too small for a UTC time value" };
 
     Time time {};
 
@@ -94,7 +94,7 @@ std::expected<Time, std::string_view> parse_utc_time(std::string_view segment) {
         if (auto temp = Stf::fast_sv_to_int<int, false, true>(segment.substr(start, len)); temp != std::nullopt)
             time.*ptr = *temp;
         else
-            return std::unexpected { "Failure parsing UTC time segment as an integer" };
+            return tl::unexpected { "Failure parsing UTC time segment as an integer" };
     }
 
     return time;

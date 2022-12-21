@@ -13,13 +13,27 @@ constexpr size_t hash_combine(size_t lhs, size_t rhs) {
     return lhs ^ (rhs + k_magic_prime + (lhs << 6) + (lhs >> 2));
 }
 
-template<typename T, typename... Ts> constexpr std::size_t multi_hash(const T& v, const Ts&... vs) {
+template<typename T, typename... Ts> constexpr size_t multi_hash(const T& v, const Ts&... vs) {
     std::size_t lhs = std::hash<T> {}(v);
 
     if constexpr (sizeof...(Ts) > 0)
         return hash_combine(lhs, multi_hash(vs...));
     else
         return lhs;
+}
+
+template<typename It>
+constexpr size_t iter_hash(It beg, It end) {
+    using HashFn = std::hash<typename It::value_type>;
+    HashFn hash_fn {};
+
+    size_t hash = 0;
+
+    for (It it = beg; it != end;) {
+        hash = hash_combine(hash, hash_fn(*it++));
+    }
+
+    return hash;
 }
 
 }

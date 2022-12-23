@@ -1,3 +1,6 @@
+// TODO: add proper platform detection
+#ifdef __i386__
+
 #include <Stuff/Util/CPUID/Features.hpp>
 
 #include <algorithm>
@@ -140,3 +143,5 @@ bool have_feature(Feature feature) noexcept {
 }
 
 }
+
+#endif

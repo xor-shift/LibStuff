@@ -1,3 +1,6 @@
+// TODO: add proper platform detection
+#ifdef __unix__
+
 #include <Stuff/Util/MMap.hpp>
 
 #include <Stuff/Util/Scope.hpp>
@@ -45,3 +48,5 @@ void MMapStringView::deinitialize() noexcept {
 }
 
 }
+
+#endif

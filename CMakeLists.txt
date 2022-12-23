@@ -15,67 +15,13 @@ endif()
 
 add_subdirectory(Thirdparty/expected)
 
-set(LIBSTUFF_HEADERS
-        Inc/Stuff/Files/Format.hpp
-
-        Inc/Stuff/Graphics/Image.hpp
-        Inc/Stuff/Graphics/Traits.hpp
-
-        Inc/Stuff/Intro/Introspectors/Array.hpp
-        Inc/Stuff/Intro/Introspectors/Map.hpp
-        Inc/Stuff/Intro/Introspectors/Span.hpp
-        Inc/Stuff/Intro/Introspectors/Tuple.hpp
-        Inc/Stuff/Intro/Introspectors/UnorderedMap.hpp
-        Inc/Stuff/Intro/Introspectors/Vector.hpp
-        Inc/Stuff/Intro/AggregateExplorers.hpp
-        Inc/Stuff/Intro/Dump.hpp
-        Inc/Stuff/Intro/HelperTypes.hpp
-        Inc/Stuff/Intro/Intro.hpp
-        Inc/Stuff/Intro/Introspector.hpp
-        Inc/Stuff/Intro/SAgg.hpp
-
-        Inc/Stuff/IO/ACS.hpp
-        Inc/Stuff/IO/Delim.hpp
-        Inc/Stuff/IO/GPS.hpp
-        Inc/Stuff/IO/Nextion.hpp
-        Inc/Stuff/IO/NTC.hpp
-        Inc/Stuff/IO/SoftUART.hpp
-
-        Inc/Stuff/Maths/BLAS/Concepts.hpp
-        Inc/Stuff/Maths/BLAS/Matrix.hpp
-        Inc/Stuff/Maths/BLAS/MatVec.hpp
-        Inc/Stuff/Maths/BLAS/Quat.hpp
-        Inc/Stuff/Maths/BLAS/Util.hpp
-        Inc/Stuff/Maths/BLAS/Vector.hpp
-        Inc/Stuff/Maths/Check/CRC.hpp
-        Inc/Stuff/Maths/Crypt/DES/Funcs.hpp
-        Inc/Stuff/Maths/Crypt/DES/SBox.hpp
-        Inc/Stuff/Maths/Crypt/DES/Tables.hpp
-        Inc/Stuff/Maths/Crypt/DES.hpp
-        Inc/Stuff/Maths/Crypt/Tripcode.hpp
-        Inc/Stuff/Maths/Scalar/Basic.hpp
-        Inc/Stuff/Maths/Scalar/Classification.hpp
-        Inc/Stuff/Maths/Scalar/Exponential.hpp
-        Inc/Stuff/Maths/Scalar/FloatUtils.hpp
-        Inc/Stuff/Maths/Scalar/Interpolation.hpp
-        Inc/Stuff/Maths/Scalar/Manipulation.hpp
-        Inc/Stuff/Maths/Scalar/Power.hpp
-        Inc/Stuff/Maths/Scalar/Trig.hpp
-        Inc/Stuff/Maths/Bit.hpp
-        Inc/Stuff/Maths/Fmt.hpp
-        Inc/Stuff/Maths/Random.hpp
-        Inc/Stuff/Maths/Scalar.hpp
-        )
-
-add_library(${PROJECT_NAME} ${LIBSTUFF_HEADERS}
+add_library(${PROJECT_NAME}
         Src/IO/Delim.cpp
         Src/IO/GPS.cpp
         Src/IO/SoftUART.cpp
 
         Src/Util/CPUID/Features.cpp
         Src/Util/MMap.cpp)
-
-target_precompile_headers(${PROJECT_NAME} PRIVATE ${LIBSTUFF_HEADERS})
 
 target_include_directories(${PROJECT_NAME} PUBLIC Inc)
 

@@ -7,6 +7,7 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <ranges>
 #include <span>
 
 #include <Stuff/Maths/Bit.hpp>
@@ -180,7 +181,7 @@ namespace Detail {
 
 static constexpr SHA512Properties::state_type generate_mods512_iv() {
     auto iv = SHA512Properties::default_h;
-    for (auto &v : iv)
+    for (auto& v : iv)
         v ^= 0xa5a5a5a5a5a5a5a5UL;
     return iv;
 }
@@ -192,10 +193,8 @@ struct ModSHA512Properties : SHA512Properties {
 };
 
 template<size_t NWords>
-requires (NWords <= 8) && (NWords != 0) && (NWords != 6)
-struct Sha512TProperties : SHA512Properties {
-
-};
+    requires(NWords <= 8) && (NWords != 0) && (NWords != 6)
+struct Sha512TProperties : SHA512Properties { };
 
 template<SHA2Properties Props> struct SHA2State {
     constexpr void reset() {
@@ -209,6 +208,22 @@ template<SHA2Properties Props> struct SHA2State {
 
         if (m_pending_data >= m_data.size())
             finish_block();
+    }
+
+    template<typename T, size_t Extent> constexpr void update(std::span<T, Extent> data) {
+        if consteval {
+            for (auto b : data)
+                update(b);
+            return;
+        }
+
+        // funky time
+        update_bulk({ reinterpret_cast<const uint8_t*>(data.data()), data.size() * sizeof(T) });
+    }
+
+    template<typename Char, typename Traits = std::char_traits<Char>>
+    constexpr void update(std::basic_string_view<Char, Traits> data) {
+        return update(std::span(data));
     }
 
     template<typename T>
@@ -228,13 +243,6 @@ template<SHA2Properties Props> struct SHA2State {
 
             update(std::span { p, sizeof(T) });
         }
-    }
-
-    template<typename Range>
-        requires std::ranges::range<Range>
-    constexpr void update(Range&& data) {
-        for (auto b : data)
-            update(b);
     }
 
     constexpr void update(char c) { return update(std::bit_cast<uint8_t>(c)); }
@@ -264,6 +272,29 @@ private:
 
     typename Props::state_type m_digest { Props::default_h };
     typename Props::schedule_type m_schedule;
+
+    constexpr void update_bulk(std::span<const uint8_t> data) {
+        const auto data_sz = std::ranges::distance(data);
+        const auto available_space = m_data.size() - m_pending_data;
+
+        const auto cur_sz = std::min<size_t>(available_space, data_sz);
+        const auto excess_sz = data_sz - cur_sz;
+
+        // const auto cur_data = data | std::ranges::views::take(cur_sz);
+        const auto cur_data = data.subspan(0, cur_sz);
+
+        std::ranges::copy(cur_data, m_data.data() + m_pending_data);
+        m_pending_data += cur_sz;
+        if (m_pending_data == m_data.size()) {
+            finish_block();
+        }
+
+        if (excess_sz == 0)
+            return;
+
+        // return update(data | std::ranges::views::drop(cur_sz));
+        return update(data.subspan(cur_sz));
+    }
 
     constexpr void finish_block() {
         data_to_schedule();

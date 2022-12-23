@@ -16,6 +16,7 @@ template<typename Props, typename T> static void test_vec(T&& vectors, bool capi
     }
 }
 
+// https://www.cosic.esat.kuleuven.be/nessie/testvectors/hash/sha/index.html
 template<typename Props> static void unified_test(std::span<std::string_view> hashes) {
     std::array<std::string_view, 8> tests { {
       "",                                                                                 //

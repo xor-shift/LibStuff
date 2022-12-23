@@ -79,12 +79,18 @@ if (LibStuffCompileBenchmarks)
     target_link_libraries(${PROJECT_NAME}_benchmark_des ${PROJECT_NAME} benchmark)
     target_compile_options(${PROJECT_NAME}_benchmark_des PRIVATE -march=native -mtune=native)
 
+    add_executable(${PROJECT_NAME}_benchmark_hash Benchmarks/main.cpp Benchmarks/Maths/Hash.cpp)
+    target_link_libraries(${PROJECT_NAME}_benchmark_hash ${PROJECT_NAME} benchmark)
+    target_compile_options(${PROJECT_NAME}_benchmark_hash PRIVATE -march=native -mtune=native)
+
     add_executable(${PROJECT_NAME}_benchmarks
             Benchmarks/main.cpp
 
             Benchmarks/Gfx/Util/Alloc.cpp
             #Benchmarks/Gfx/Image/QoI.cpp
 
+            Benchmarks/Maths/DES.cpp
+            Benchmarks/Maths/Hash.cpp
             Benchmarks/Maths/Random.cpp
             )
 

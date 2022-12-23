@@ -211,14 +211,12 @@ template<SHA2Properties Props> struct SHA2State {
     }
 
     template<typename T, size_t Extent> constexpr void update(std::span<T, Extent> data) {
-        if consteval {
+        if constexpr (std::is_same_v<std::remove_const<T>, uint8_t>) {
+            update_bulk(data);
+        } else {
             for (auto b : data)
                 update(b);
-            return;
         }
-
-        // funky time
-        update_bulk({ reinterpret_cast<const uint8_t*>(data.data()), data.size() * sizeof(T) });
     }
 
     template<typename Char, typename Traits = std::char_traits<Char>>

@@ -1,7 +1,13 @@
 #pragma once
 
+#include <algorithm>
+#include <array>
+#include <bit>
 #include <cstddef>
+#include <cstdint>
+#include <iterator>
 #include <limits>
+#include <optional>
 #include <tuple>
 
 namespace Stf::FFormat {

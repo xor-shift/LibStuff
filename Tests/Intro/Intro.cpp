@@ -80,8 +80,8 @@ TEST(Intro, StdContainers) {
     static_assert(Stf::ListIntrospector<vector_introspector>);
     static_assert(Stf::TupleIntrospector<tuple_introspector>);
     static_assert(Stf::TupleIntrospector<sagg_introspector>);
-    static_assert(Stf::ObjectIntrospector<map_introspector>);
-    static_assert(Stf::ObjectIntrospector<umap_introspector>);
+    static_assert(Stf::MapIntrospector<map_introspector>);
+    static_assert(Stf::MapIntrospector<umap_introspector>);
 
     T foo { 1, 2.3f, 4.5, "Hello, world!" };
 

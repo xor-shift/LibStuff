@@ -14,7 +14,7 @@ namespace std { // NOLINT(cert-dcl58-cpp)
 
 template<typename T> struct Introspector;
 
-template<typename T> struct Introspector<span<T>> {
+template<typename T, size_t Extent> struct Introspector<span<T, Extent>> {
     using type = span<T>;
     using member_type = T;
 
@@ -23,7 +23,7 @@ template<typename T> struct Introspector<span<T>> {
     INTRO_INDEX_FACTORY();
 };
 
-template<typename T> STF_MAKE_ADL_INTROSPECTOR(span<T>)
+template<typename T, size_t Extent> STF_MAKE_ADL_INTROSPECTOR(span<T, Extent>)
 
 }
 

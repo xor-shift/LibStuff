@@ -101,7 +101,7 @@ template<typename T, typename Stream> inline constexpr Stream& dump_to_stream(St
             return Detail::dump_list(stream, v, depth);
         } else if constexpr (Stf::TupleIntrospector<Intro>) {
             return Detail::dump_tuple(stream, v, depth);
-        } else if constexpr (Stf::ObjectIntrospector<Intro>) {
+        } else if constexpr (Stf::MapIntrospector<Intro>) {
             return Detail::dump_object(stream, v, depth);
         } else {
             return stream << "[Opaque Value (!)]";

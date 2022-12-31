@@ -17,6 +17,28 @@ struct ConvertibleToAnything {
 template<typename... Ts> struct ABunchOfTypes {
     using tuple_type = std::tuple<Ts...>;
     using variant_type = std::variant<Ts...>;
+
+    static constexpr size_t size = sizeof...(Ts);
+};
+
+template<auto... Vs> struct ABunchOfValues;
+
+template<> struct ABunchOfValues<> {
+    static constexpr size_t size = 0;
+};
+
+template<auto V, auto... Vs> struct ABunchOfValues<V, Vs...> {
+    static constexpr size_t size = sizeof...(Vs) + 1;
+
+    static constexpr auto head = V;
+    using tail_type = std::conditional_t<sizeof...(Vs) == 0, void, ABunchOfValues<Vs...>>;
+
+    template<size_t N> static constexpr auto get() {
+        if constexpr (N == 0)
+            return V;
+        else
+            return tail_type::template get<N - 1>();
+    }
 };
 
 template<typename... Ts> struct False {
@@ -29,6 +51,17 @@ template<size_t N> struct ArrayString {
     constexpr ArrayString(char const (&str)[N]) { std::copy(str, str + N, this->str); }
 
     operator std::string_view() { return { str, str + N }; }
+
+    template<size_t M>
+    friend constexpr std::strong_ordering operator<=>(ArrayString const& lhs, ArrayString<M> const& rhs) {
+        for (size_t i = 0; i < std::min(M, N); i++) {
+            std::strong_ordering t = lhs.str[i] <=> rhs.str[i];
+            if (t != std::strong_ordering::equal)
+                return t;
+        }
+
+        return N <=> M;
+    }
 };
 
 template<size_t N> ArrayString(char const (&)[N]) -> ArrayString<N>;

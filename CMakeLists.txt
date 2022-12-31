@@ -51,6 +51,7 @@ if (LibStuffCompileTests)
     add_executable(${PROJECT_NAME}_tests
             Tests/Graphics/Image.cpp
 
+            Tests/Intro/Builder.cpp
             Tests/Intro/Intro.cpp
 
             Tests/IO/Delim.cpp

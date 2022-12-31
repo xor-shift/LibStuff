@@ -7,6 +7,8 @@
 #include <string_view>
 #include <type_traits>
 
+#include <Stuff/Serde/IntroSerializers.hpp>
+
 /*template<typename Serializer>
 constexpr tl::expected<void, std::string_view> _libstf_adl_serializer(Serializer& serializer, bool v) {
     return serializer.serialize_bool(v);
@@ -36,10 +38,28 @@ _libstf_adl_serializer(Serializer& serializer, std::basic_string_view<char> str)
 
 namespace Stf {
 
+namespace Detail {
+
 template<typename Serializer, typename T>
-    requires(requires(Serializer& serializer, T const& v) { _libstf_adl_serializer(serializer, v); })
+concept ADLSerializable = //
+  requires(Serializer& serializer, T const& v) { _libstf_adl_serializer(serializer, v); };
+
+template<typename Serializer, typename T>
+concept IntroSerializable = //
+  requires(Serializer& serializer, T const& v) { Stf::Serde::intro_serialize(serializer, v); };
+
+}
+
+template<typename Serializer, typename T>
+    requires(Detail::ADLSerializable<Serializer, T>)
 constexpr auto serialize(Serializer& serializer, T const& v) {
     return _libstf_adl_serializer(serializer, v);
+}
+
+template<typename Serializer, typename T>
+    requires(!Detail::ADLSerializable<Serializer, T>) && (Detail::IntroSerializable<Serializer, T>)
+constexpr auto serialize(Serializer& serializer, T const& v) {
+    return Serde::intro_serialize(serializer, v);
 }
 
 }

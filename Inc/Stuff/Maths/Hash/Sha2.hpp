@@ -358,3 +358,12 @@ private:
 };
 
 }
+
+namespace Stf::Hash {
+
+using SHA224State = SHA2::SHA2State<SHA2::SHA224Properties>;
+using SHA256State = SHA2::SHA2State<SHA2::SHA256Properties>;
+using SHA384State = SHA2::SHA2State<SHA2::SHA384Properties>;
+using SHA512State = SHA2::SHA2State<SHA2::SHA512Properties>;
+
+}

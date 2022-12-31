@@ -23,16 +23,6 @@ add_library(${PROJECT_NAME}
         Src/Util/CPUID/Features.cpp
         Src/Util/MMap.cpp)
 
-if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-    target_compile_options(${PROJECT_NAME} PUBLIC -O3)
-elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
-    target_compile_options(${PROJECT_NAME} PUBLIC -O3 -g)
-elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "MinSizeRel")
-    target_compile_options(${PROJECT_NAME} PUBLIC -Os)
-else ()
-    target_compile_options(${PROJECT_NAME} PUBLIC -O0 -g)
-endif ()
-
 target_include_directories(${PROJECT_NAME} PUBLIC Inc)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC expected)

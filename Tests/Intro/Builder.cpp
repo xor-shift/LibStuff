@@ -7,8 +7,8 @@
 #include <Stuff/Serde/Serde.hpp>
 #include <Stuff/Serde/Serializers/JSON.hpp>
 
-#include <tl/expected.hpp>
 #include <fmt/format.h>
+#include <tl/expected.hpp>
 
 namespace BuilderCPP {
 
@@ -23,12 +23,8 @@ inline constexpr auto _libstf_adl_introspector(Bar&&) {
     auto accessor = Stf::Intro::StructBuilder<Bar> {} //
                       .add_simple<&Bar::a, "a">()
                       .add_simple<&Bar::b, "b">()
-                      .add_with_transform<&Bar::c, "c">([]<typename T>(T&& v) {
-                          return *v;
-                      })
-                      .add_with_transform<&Bar::d, "c">([]<typename T>(T&& v) {
-                          return std::string_view(v);
-                      });
+                      .add_with_transform<&Bar::c, "c">([]<typename T>(T&& v) { return *v; })
+                      .add_with_transform<&Bar::d, "c">([]<typename T>(T&& v) { return std::string_view(v); });
     return accessor;
 }
 
@@ -50,7 +46,7 @@ inline constexpr auto _libstf_adl_introspector(Baz&&) {
 
 }
 
-TEST(Intro, Builder) {
+static auto get_baz() {
     BuilderCPP::Baz baz {
         .a = {
           .a = 0,
@@ -77,10 +73,36 @@ TEST(Intro, Builder) {
         .d = 9,
     };
 
+    return baz;
+}
+
+template<typename T> static std::optional<std::string> serialize_to_string(T&& v) {
     std::string str {};
     std::ostringstream oss(str);
     Stf::Serde::JSON::Serializer<std::ostringstream> ser { oss };
-    ASSERT_TRUE(Stf::serialize(ser, baz).has_value());
+    if (!Stf::serialize(ser, std::forward<T>(v)).has_value())
+        return std::nullopt;
     oss.flush();
-    fmt::print("{}\n", oss.str());
+    return oss.str();
+}
+
+TEST(Intro, Builder) {
+    const std::string_view expected
+      = "[[0, \"1\", 2, \"3.1415926\"], [[3, \"4\", 5, \"2.718281\"]], [[6, \"7\", 8, \"1.618\"]], 9]";
+
+    const BuilderCPP::Baz v_0 = get_baz();
+    BuilderCPP::Baz v_1 = get_baz();
+    BuilderCPP::Baz&& v_2 = get_baz();
+
+    std::vector<std::optional<std::string>> results;
+
+    results.push_back(serialize_to_string(v_0)); //const lvalue
+    results.push_back(serialize_to_string(v_1)); //lvalue
+    results.push_back(serialize_to_string(static_cast<BuilderCPP::Baz const&&>(v_2))); //const rvalue
+    results.push_back(serialize_to_string(std::move(v_2))); //rvalue
+
+    for (auto const& res : results) {
+        ASSERT_TRUE(res);
+        ASSERT_EQ(*res, expected);
+    }
 }

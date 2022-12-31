@@ -1,7 +1,6 @@
 #pragma once
 
-// macro from p0779r0
-// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/p0779r0.pdf
+#include <tl/expected.hpp>
 
 namespace Stf::Detail {
 
@@ -12,15 +11,15 @@ template<typename T, typename E> struct ExpectedReturner<tl::expected<T, E>> {
 };
 
 template<typename E> struct ExpectedReturner<tl::expected<void, E>> {
-    constexpr static void ret(tl::expected<void, E>&& v) { return; }
+    constexpr static void ret([[maybe_unused]] tl::expected<void, E>&&) { }
 };
 
 }
 
-#define TRYX(m)                                               \
-    ({                                                        \
-        auto res = (m);                                       \
-        if (!res.has_value())                                 \
-            return tl::unexpected { res.error() };            \
+#define TRYX(...)                                                          \
+    ({                                                                     \
+        auto res = (__VA_ARGS__);                                          \
+        if (!res.has_value())                                              \
+            return tl::unexpected { res.error() };                         \
         Stf::Detail::ExpectedReturner<decltype(res)>::ret(std::move(res)); \
     })

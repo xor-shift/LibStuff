@@ -1,13 +1,21 @@
 #pragma once
 
-#include <cstddef>
-
-#include "./FloatUtils.hpp"
-
-namespace Stf {
+namespace Stf::Detail::CEMaths {
 
 template<std::floating_point T> constexpr T exp(T x) {
-    const T target_delta = static_cast<T>(0.00001);
+    if (is_nan(x))
+        return x;
+
+    if (x < 0 && is_inf(x))
+        return 0;
+
+    if (x > 0 && is_inf(x))
+        return x;
+
+    if (x == 0)
+        return 1;
+
+    const T target_delta = 0.00001f;
     const size_t max_rounds = 50;
 
     if (x <= 0.0001)
@@ -18,7 +26,7 @@ template<std::floating_point T> constexpr T exp(T x) {
 
     for (size_t k = 1;;) {
         ret += term;
-        const auto temp = term * (x / static_cast<T>(k));
+        const auto temp = term * (x / k);
         const auto close_enough = k != 1 && is_close(temp, term, target_delta);
         term = temp;
 
@@ -27,6 +35,18 @@ template<std::floating_point T> constexpr T exp(T x) {
     }
 
     return ret;
+}
+
+}
+
+namespace Stf {
+
+template<std::floating_point T> constexpr T exp(T x) {
+    if consteval {
+        return Detail::CEMaths::exp(x);
+    } else {
+        return std::exp(x);
+    }
 }
 
 }

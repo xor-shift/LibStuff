@@ -1,16 +1,6 @@
 #pragma once
 
-#include <algorithm>
-#include <array>
-#include <bit>
-#include <cstddef>
-#include <limits>
-#include <utility>
-
-#include "./Basic.hpp"
-#include "./FloatUtils.hpp"
-
-namespace Stf {
+namespace Stf::Detail::CEMaths {
 
 /// TODO: this is most definitely not standards compliant
 template<std::floating_point T, std::integral U> constexpr T pow(T base, U iexp) {
@@ -34,7 +24,7 @@ template<std::floating_point T, std::integral U> constexpr T pow(T base, U iexp)
     if (base == 1 || iexp == 0)
         return 1;
 
-    const std::array<std::pair<std::array<bool, 4>, T>, 12> exceptions { {
+    const std::pair<bool[4], T> exceptions[] {
         // pow(+0, exp), where exp is a negative odd integer, returns +∞ and raises FE_DIVBYZERO
         { { zero_base, pos_base, neg_exp, odd_exp }, inf },
         // pow(-0, exp), where exp is a negative odd integer, returns -∞ and raises FE_DIVBYZERO
@@ -59,7 +49,7 @@ template<std::floating_point T, std::integral U> constexpr T pow(T base, U iexp)
         { { inf_base, pos_base, neg_exp, true }, static_cast<T>(+0.f) },
         // pow(+∞, exp) returns +∞ for any positive exp
         { { inf_base, pos_base, pos_exp, true }, inf },
-    } };
+    };
 
     for (auto [conditions, ret_val] : exceptions) {
         if (std::all_of(conditions.cbegin(), conditions.cend(), [](auto v) { return v; }))
@@ -87,10 +77,10 @@ template<std::floating_point T, std::integral U> constexpr T pow(T base, U iexp)
         return base;
 
     using E = std::make_unsigned_t<U>;
-    const auto exponent = static_cast<E>(abs(iexp));
+    const E exponent = abs(iexp);
 
-    const auto e_bits = std::numeric_limits<E>::digits - std::countl_zero(exponent);
-    const auto negative_exponent = iexp < 0;
+    const int e_bits = std::numeric_limits<E>::digits - std::countl_zero(exponent);
+    const bool negative_exponent = iexp < 0;
 
     T ret = 1;
     for (size_t i = 0; i < e_bits; i++) {
@@ -101,11 +91,23 @@ template<std::floating_point T, std::integral U> constexpr T pow(T base, U iexp)
     }
 
     if (negative_exponent)
-        ret = static_cast<T>(1) / ret;
+        ret = 1 / ret;
 
     return ret;
 }
 
 //static_assert(pow(2.f, 10) == 1024.f);
+
+}
+
+namespace Stf {
+
+template<std::floating_point T, std::integral U> constexpr T pow(T base, U iexp) {
+    if consteval {
+        return Detail::CEMaths::pow(base, iexp);
+    } else {
+        return std::pow(base, iexp)
+    }
+}
 
 }

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "./FloatUtils.hpp"
-
 namespace Stf {
 
 template<typename T> constexpr T inv_lerp(T v, T a, T b) {

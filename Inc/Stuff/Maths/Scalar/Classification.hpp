@@ -1,9 +1,5 @@
 #pragma once
 
-#include <concepts>
-
-#include "./FloatUtils.hpp"
-
 namespace Stf {
 
 template<std::floating_point T> constexpr bool is_nan(T f) {

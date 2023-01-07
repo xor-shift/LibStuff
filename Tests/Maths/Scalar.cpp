@@ -23,9 +23,9 @@
 TEST(Scalar, Basic) {
     SASSERT_TRUE(Stf::is_close(-1.000001, -0.999999));
 
-    ASSERT_FLOAT_EQ(Stf::abs(-1.), 1.);
-    ASSERT_FLOAT_EQ(Stf::abs(-0.f), 0.f);
-    ASSERT_EQ(Stf::abs(-1), 1);
+    ASSERT_FLOAT_EQ(Stf::fabs(-1.), 1.);
+    ASSERT_FLOAT_EQ(Stf::fabs(-0.f), 0.f);
+    SASSERT_EQ(Stf::fabs(-1), 1);
 }
 
 TEST(Scalar, Classification) {

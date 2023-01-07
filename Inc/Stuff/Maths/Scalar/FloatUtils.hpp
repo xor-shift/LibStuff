@@ -1,9 +1,5 @@
 #pragma once
 
-#include <bit>
-#include <concepts>
-#include <cstdint>
-
 namespace Stf {
 
 template<typename T> struct FloatParts;

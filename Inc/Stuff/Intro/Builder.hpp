@@ -16,8 +16,6 @@ namespace Detail {
 
 template<ArrayString MemberName, typename Accessor> struct MemberDetails {
     using struct_type = typename Accessor::struct_type;
-    using member_type = typename Accessor::member_type;
-    using access_type = typename Accessor::access_type;
 
     static constexpr ArrayString member_name = MemberName;
 
@@ -40,82 +38,62 @@ constexpr size_t find_named_member_index() {
     }
 }
 
-template<typename T> struct AccessTypeHelper {
-    using type = T;
+template<typename T> struct ArrayMemberHelper;
+
+template<typename T> struct ArrayMemberHelper<T[]> {
+    using value_type = T;
+    static constexpr size_t extent = std::dynamic_extent;
+
+    using span_type = std::span<value_type, extent>;
+    using const_span_type = std::span<const value_type, extent>;
 };
 
-template<typename T> struct AccessTypeHelper<T[]> {
-    using type = std::span<T>;
+template<typename T, size_t N> struct ArrayMemberHelper<T[N]> {
+    using value_type = T;
+    static constexpr size_t extent = N;
+
+    using span_type = std::span<value_type, extent>;
+    using const_span_type = std::span<const value_type, extent>;
 };
 
-template<typename T> struct AccessTypeHelper<const T[]> {
-    using type = std::span<const T>;
-};
+template<typename For, auto MemberPtr>
+using member_type = std::remove_reference_t<decltype(std::declval<For>().*MemberPtr)>;
 
-template<typename T, size_t N> struct AccessTypeHelper<T[N]> {
-    using type = std::span<T, N>;
-};
+template<typename For, auto MemberPtr> struct MemberAccessor;
 
-template<typename T, size_t N> struct AccessTypeHelper<const T[N]> {
-    using type = std::span<const T, N>;
-};
-
-template<typename For, auto MemberPtr> struct MemberAccessor {
+template<typename For, auto MemberPtr>
+    requires std::is_array_v<member_type<For, MemberPtr>>
+struct MemberAccessor<For, MemberPtr> {
     using struct_type = For;
-    using member_type = std::remove_reference_t<decltype(std::declval<For>().*MemberPtr)>;
-    using const_member_type = std::remove_reference_t<decltype(std::declval<const For>().*MemberPtr)>;
-    using access_type = typename Detail::AccessTypeHelper<member_type>::type;
-    using const_access_type = typename Detail::AccessTypeHelper<const_member_type>::type;
 
-    static constexpr bool span_accessor = std::is_array_v<member_type>;
+    static constexpr auto(For::*member_ptr) = MemberPtr;
 
-    static constexpr member_type(For::*member_ptr) = MemberPtr;
-
-    constexpr access_type& operator()(struct_type& obj) const
-        requires(!span_accessor)
-    {
-        return obj.*member_ptr;
+    constexpr auto operator()(struct_type& obj) const {
+        return typename ArrayMemberHelper<member_type<For, MemberPtr>>::span_type { obj.*member_ptr };
     }
 
-    constexpr access_type&& operator()(struct_type&& obj) const
-        requires(!span_accessor)
-    {
-        return std::move(obj.*member_ptr);
+    constexpr auto operator()(struct_type const& obj) const {
+        return typename ArrayMemberHelper<member_type<For, MemberPtr>>::const_span_type { obj.*member_ptr };
     }
+};
 
-    constexpr access_type const& operator()(struct_type const& obj) const
-        requires(!span_accessor)
-    {
-        return obj.*member_ptr;
-    }
+template<typename For, auto MemberPtr>
+    requires(!std::is_array_v<member_type<For, MemberPtr>>)
+struct MemberAccessor<For, MemberPtr> {
+    using struct_type = For;
 
-    constexpr access_type const&& operator()(struct_type const&& obj) const
-        requires(!span_accessor)
-    {
-        return std::move(obj.*member_ptr);
-    }
+    static constexpr auto(For::*member_ptr) = MemberPtr;
 
-    constexpr access_type operator()(struct_type& obj) const
-        requires(span_accessor)
-    {
-        return obj.*member_ptr;
-    }
-
-    constexpr const_access_type operator()(struct_type const& obj) const
-        requires(span_accessor)
-    {
-        return obj.*member_ptr;
-    }
+    constexpr auto& operator()(struct_type& obj) const { return obj.*member_ptr; }
+    constexpr decltype(auto) operator()(struct_type&& obj) const { return std::move(obj.*member_ptr); }
+    constexpr auto const& operator()(struct_type const& obj) const { return obj.*member_ptr; }
+    constexpr decltype(auto) operator()(struct_type const&& obj) const { return std::move(obj.*member_ptr); }
 };
 
 template<typename For, auto MemberPtr, typename Transform> struct TransformMemberAccessor {
     using struct_type = For;
-    using member_type = std::remove_reference_t<decltype(std::declval<For>().*MemberPtr)>;
-    using const_member_type = std::remove_reference_t<decltype(std::declval<const For>().*MemberPtr)>;
-    using access_type = typename Detail::AccessTypeHelper<member_type>::type;
-    using const_access_type = typename Detail::AccessTypeHelper<const_member_type>::type;
 
-    static constexpr member_type(For::*member_ptr) = MemberPtr;
+    static constexpr auto(For::*member_ptr) = MemberPtr;
     static constexpr Transform transform {};
 
     constexpr decltype(auto) operator()(struct_type& obj) const { return transform(obj.*member_ptr); }
@@ -128,12 +106,10 @@ template<typename For, auto MemberPtr, typename Transform> struct TransformMembe
 
 template<typename For, Detail::MemberDetails... MemberDetailers> struct StructBuilder {
     using type = For;
-    using types = ABunchOfTypes<typename decltype(MemberDetailers)::access_type...>;
     using keys = ABunchOfValues<decltype(MemberDetailers)::member_name...>;
 
-    template<size_t I> using nth_type = std::tuple_element_t<I, types>;
-
     static constexpr size_t size() { return sizeof...(MemberDetailers); }
+    static constexpr size_t size(For const&) { return size(); }
 
     template<size_t N> static constexpr auto get_details() {
         auto tup = std::make_tuple(MemberDetailers...);
@@ -142,6 +118,11 @@ template<typename For, Detail::MemberDetails... MemberDetailers> struct StructBu
 
     template<size_t I, typename Struct> static constexpr decltype(auto) get(Struct&& v) {
         return StructBuilder::get_details<I>().accessor(std::forward<Struct>(v));
+    }
+
+    template<size_t I>
+    static constexpr auto key_name() {
+        return keys::template get<I>();
     }
 
     template<ArrayString MemberName, typename Struct> static constexpr decltype(auto) get(Struct&& v) {

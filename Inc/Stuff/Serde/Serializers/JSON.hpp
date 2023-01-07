@@ -12,12 +12,26 @@
 
 namespace Stf::Serde::JSON {
 
+struct Config {
+    bool compact = true;
+
+    //if not compact
+
+    /// set to 0 to use \\t instead of spaces
+    size_t max_col = 80;
+    bool inline_arrays = true;
+    size_t tab_size = 1;
+};
+
+
 namespace Detail {
 template<typename Stream> struct ListSerializer;
+template<typename Stream> struct ObjectSerializer;
 }
 
 template<typename Stream> struct Serializer {
     Stream& stream;
+    Config config;
 
     using ok_type = void;
     using error_type = std::string_view;
@@ -27,6 +41,8 @@ template<typename Stream> struct Serializer {
     using array_serializer = Detail::ListSerializer<Stream>;
     using list_serializer = Detail::ListSerializer<Stream>;
     using tuple_serializer = Detail::ListSerializer<Stream>;
+    using struct_serializer = Detail::ObjectSerializer<Stream>;
+    using map_serializer = Detail::ObjectSerializer<Stream>;
 
     template<std::floating_point T> constexpr result_type serialize_float(T v);
 
@@ -48,6 +64,8 @@ template<typename Stream> struct Serializer {
     constexpr tl::expected<list_serializer, error_type> serialize_list(std::optional<size_t> length);
 
     template<size_t Size> constexpr tl::expected<tuple_serializer, error_type> serialize_tuple();
+
+    constexpr tl::expected<struct_serializer, error_type> serialize_struct(size_t length);
 };
 
 namespace Detail {
@@ -65,7 +83,7 @@ template<typename Stream> struct ListSerializer {
 
     template<typename T> constexpr tl::expected<void, std::string_view> serialize_element(T const& v) {
         if (!m_empty)
-            m_stream << ", ";
+            m_stream << ',';
         m_empty = false;
 
         Serializer<Stream> sub_ser { m_stream };
@@ -78,6 +96,40 @@ template<typename Stream> struct ListSerializer {
 
 private:
     Stream& m_stream;
+    Config m_config;
+    bool m_empty = true;
+};
+
+template<typename Stream> struct ObjectSerializer {
+    constexpr ObjectSerializer(Stream& stream)
+        : m_stream(stream) {
+        m_stream << '{';
+    }
+
+    using ok_type = void;
+    using error_type = std::string_view;
+
+    using result_type = tl::expected<ok_type, error_type>;
+
+    template<typename T>
+    constexpr tl::expected<void, std::string_view> serialize_element(std::string_view key, T const& v) {
+        if (!m_empty)
+            m_stream << ',';
+        m_empty = false;
+
+        Serializer<Stream> sub_ser { m_stream };
+        Stf::serialize(sub_ser, key);
+        sub_ser.stream << ':';
+        Stf::serialize(sub_ser, v);
+
+        return {};
+    }
+
+    constexpr void end() { m_stream << '}'; }
+
+private:
+    Stream& m_stream;
+    Config m_config;
     bool m_empty = true;
 };
 
@@ -121,14 +173,14 @@ constexpr typename Serializer<Stream>::result_type Serializer<Stream>::serialize
 template<typename Stream>
 template<typename Char, typename Traits>
 constexpr typename Serializer<Stream>::result_type Serializer<Stream>::serialize_char(Char v) {
-    return serialize_str<Char>({&v, &v + 1});
+    return serialize_str<Char>({ &v, &v + 1 });
 }
 
 template<typename Stream>
 template<typename Char, typename Traits>
 constexpr typename Serializer<Stream>::result_type
 Serializer<Stream>::serialize_str(std::basic_string_view<Char, Traits> str) {
-    //TODO: escape strings
+    // TODO: escape strings
     stream << '"' << str << '"';
     return {};
 }
@@ -151,6 +203,12 @@ template<size_t Size>
 constexpr tl::expected<typename Serializer<Stream>::tuple_serializer, typename Serializer<Stream>::error_type>
 Serializer<Stream>::serialize_tuple() {
     return list_serializer { stream };
+}
+
+template<typename Stream>
+constexpr tl::expected<typename Serializer<Stream>::struct_serializer, typename Serializer<Stream>::error_type>
+Serializer<Stream>::serialize_struct(size_t) {
+    return struct_serializer { stream };
 }
 
 }

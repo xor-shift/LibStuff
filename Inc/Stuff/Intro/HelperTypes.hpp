@@ -50,7 +50,7 @@ template<size_t N> struct ArrayString {
 
     constexpr ArrayString(char const (&str)[N]) { std::copy(str, str + N, this->str); }
 
-    operator std::string_view() { return { str, str + N }; }
+    operator std::string_view() const { return { str, str + N - 1 }; }
 
     template<size_t M>
     friend constexpr std::strong_ordering operator<=>(ArrayString const& lhs, ArrayString<M> const& rhs) {

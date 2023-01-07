@@ -107,6 +107,7 @@ template<SAgg T> struct SAggIntrospector {
     template<size_t I> using nth_type = std::tuple_element_t<I, types>;
 
     static constexpr size_t size() { return sagg_arity<T>; }
+    static constexpr size_t size(T const&) { return size(); }
 
     template<size_t I, typename U>
         requires(std::is_same_v<type, std::remove_cvref_t<U>>)

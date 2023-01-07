@@ -41,7 +41,6 @@ if (LibStuffCompileTests)
     add_executable(${PROJECT_NAME}_tests
             Tests/Graphics/Image.cpp
 
-            Tests/Intro/Builder.cpp
             Tests/Intro/Intro.cpp
 
             Tests/IO/Delim.cpp
@@ -54,6 +53,7 @@ if (LibStuffCompileTests)
             Tests/Maths/Scalar.cpp
             Tests/Maths/Vector.cpp
 
+            Tests/Serde/BSON.cpp
             Tests/Serde/Serde.cpp
 
             Tests/Util/Alloc.cpp

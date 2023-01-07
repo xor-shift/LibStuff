@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #include <tl/expected.hpp>
 
 namespace Stf::Detail {
@@ -21,5 +23,13 @@ template<typename E> struct ExpectedReturner<tl::expected<void, E>> {
         auto res = (__VA_ARGS__);                                          \
         if (!res.has_value())                                              \
             return tl::unexpected { res.error() };                         \
+        Stf::Detail::ExpectedReturner<decltype(res)>::ret(std::move(res)); \
+    })
+
+#define ASSERTX(...)                                                       \
+    ({                                                                     \
+        auto res = (__VA_ARGS__);                                          \
+        if (!res.has_value())                                              \
+            std::unreachable();                                            \
         Stf::Detail::ExpectedReturner<decltype(res)>::ret(std::move(res)); \
     })

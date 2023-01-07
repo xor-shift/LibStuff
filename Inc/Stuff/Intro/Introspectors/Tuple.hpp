@@ -22,6 +22,7 @@ template<typename T, typename U> struct Introspector<pair<T, U>> {
     template<size_t I> using nth_type = tuple_element_t<I, types>;
 
     static constexpr size_t size() { return 2; };
+    static constexpr size_t size(pair<T, U> const&) { return size(); };
 
     INTRO_GET_FACTORY();
 };
@@ -34,6 +35,7 @@ template<typename... Ts> struct Introspector<tuple<Ts...>> {
     template<size_t I> using nth_type = tuple_element_t<I, types>;
 
     static constexpr size_t size() { return sizeof...(Ts); }
+    static constexpr size_t size(tuple<Ts...> const&) { return size(); };
 
     INTRO_GET_FACTORY();
 };

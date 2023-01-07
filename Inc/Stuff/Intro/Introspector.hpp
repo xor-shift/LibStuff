@@ -11,8 +11,8 @@ namespace Stf::Detail {
 
 /// Do not confuse with ADL get, this is for introspectors
 template<typename T, auto Key, typename Res>
-concept GettableAt = //
-  requires(T& l, T&& r, T const& cl, T const&& cr) {
+concept GettableAtWithType = //
+  requires(typename T::type& l, typename T::type&& r, typename T::type const& cl, typename T::type const&& cr) {
       { T::template get<Key>(l) } -> std::same_as<Res&>;
       { T::template get<Key>(r) } -> std::same_as<Res&&>;
       { T::template get<Key>(cl) } -> std::same_as<Res const&>;
@@ -21,30 +21,100 @@ concept GettableAt = //
 
 template<size_t N, typename Res, typename T> struct ListGettableHelper;
 
-template<typename Res, GettableAt<0, Res> T> struct ListGettableHelper<0, Res, T> { };
+template<typename Res, GettableAtWithType<0, Res> T> struct ListGettableHelper<0, Res, T> { };
 
-template<size_t N, typename Res, GettableAt<N, Res> T>
+template<size_t N, typename Res, GettableAtWithType<N, Res> T>
     requires(requires { typename ListGettableHelper<N - 1, Res, T>; })
 struct ListGettableHelper<N, Res, T> { };
 
-template<size_t N, typename Res, typename T> struct TupleGettableHelper;
+template<typename T, auto Key>
+concept GettableAt = //
+  requires(typename T::type& l, typename T::type&& r, typename T::type const& cl, typename T::type const&& cr) {
+      T::template get<Key>(l);
+      T::template get<Key>(r);
+      T::template get<Key>(cl);
+      T::template get<Key>(cr);
+  };
 
-template<typename Res, GettableAt<0, Res> T> struct TupleGettableHelper<0, ABunchOfTypes<Res>, T> { };
+template<size_t N, typename T> struct TupleGettableHelper;
 
-template<size_t N, typename Res, typename... Us, GettableAt<N, Res> T>
-    requires(requires { typename TupleGettableHelper<N - 1, ABunchOfTypes<Res, Us...>, T>; })
-struct TupleGettableHelper<N, ABunchOfTypes<Res, Us...>, T> { };
+template<GettableAt<0> T> struct TupleGettableHelper<0, T> { };
+
+template<size_t N, GettableAt<N> T>
+    requires(requires { typename TupleGettableHelper<N - 1, T>; })
+struct TupleGettableHelper<N, T> { };
+
+template<auto> struct RequireConstant;
 
 }
 
 namespace Stf {
 
+/*
+ * TODO: relax the rvalue reference requirements? (this causes issue with "built" struct introspectors containing
+ * transformed members)
+ *
+ * all Introspector<T> must satisfy:
+ *  a typename ::type
+ *   -> U will be `typename T::type` from now on. additionally, the following declarations are to be assumed:
+ *      U& l, U const& cl, U&& r, U const&& cr
+ *  a non-constexpr ::size(cl), which quantifies some "size"
+ *
+ * tuples must additionally implement:
+ *  ::size() with the added constraint of this function being a constant expression
+ *  ::get<I>(l), ::get<I>(cl), ::get<I>(r), ::get<I>(cr) must all be callable with I up to but not including ::size()
+ *
+ * lists must additionally implement:
+ *  a typename ::member_type
+ *  ::index(l, I), ::index(cl, I), ::index(r, I), ::index(cr, I)
+ *   -> all of these should return *something* convertible to ::member_type
+ *
+ * arrays must additionally implement:
+ *  - everything from lists
+ *  - everything from tuples
+ *
+ * structs must additionally implement:
+ *  - everything from tuples
+ *  a value ::keys which is a Stf::ABunchOfValues<...> where all values are Stf::ArrayString
+ *  ::key_name<I>() which should return a std::string_view for all I up to but not including ::size()
+ *  ::get<Name>(l), ::get<Name>(cl), ::get<Name>(r), ::get<Name>(cr) should all be callable with all return values from
+ *    ::key_name<I>() with I constrained as above. The return types mustn't differ between the related Name and I
+ *
+ * objects must additionally implement:
+ *  ::at(l, name), ::at(cl, name) where name is some std::string_view. These might throw. TODO: any better approach?
+ *  ::iterate(l, fn), ::iterate(cl, fn) TODO: describe
+ *
+ * maps must additionally implement:
+ *  - everything from objects
+ *  a typename ::member_type
+ *   -> ::at calls must be convertible to this type, ::iterate calls must call fn with this type
+ *
+ */
+
+template<typename T>
+concept BaseIntrospector = //
+  requires(typename T::type const& cl) {
+      typename T::type;
+
+      { T::size(cl) } -> std::convertible_to<size_t>;
+  };
+
+template<typename T>
+concept TupleIntrospector = //
+  BaseIntrospector<T> &&    //
+  requires() {
+      { T::size() } -> std::convertible_to<size_t>;
+      typename Detail::RequireConstant<T::size()>;
+
+      typename Detail::TupleGettableHelper<T::size() - 1, T>;
+  };
+
 template<typename T>
 concept ListIntrospector = //
+  BaseIntrospector<T> &&   //
   requires(typename T::type const& v, size_t i) {
-      typename T::type;
       typename T::member_type;
-      { T::size(std::declval<typename T::type&>()) } -> std::convertible_to<size_t>;
+
       { T::index(std::declval<typename T::type&>(), i) } -> std::convertible_to<typename T::member_type&>;
       { T::index(std::declval<typename T::type const&>(), i) } -> std::convertible_to<typename T::member_type const&>;
       { T::index(std::declval<typename T::type&&>(), i) } -> std::convertible_to<typename T::member_type&&>;
@@ -52,23 +122,7 @@ concept ListIntrospector = //
   };
 
 template<typename T>
-concept ArrayIntrospector = //
-  ListIntrospector<T> &&    //
-  requires(size_t i) {
-      { T::size() } -> std::convertible_to<size_t>;
-      typename Detail::ListGettableHelper<T::size() - 1, typename T::type, T>;
-  };
-
-template<typename T>
-concept TupleIntrospector = //
-  requires() {
-      typename T::type;
-      typename T::types;
-
-      { T::size() } -> std::convertible_to<size_t>;
-
-      typename Detail::TupleGettableHelper<T::size() - 1, typename T::types, T>;
-  };
+concept ArrayIntrospector = ListIntrospector<T> && TupleIntrospector<T>;
 
 template<typename T>
 concept StructIntrospector = //
@@ -76,23 +130,25 @@ concept StructIntrospector = //
   requires() {
       typename T::keys;
 
-      //TODO: add something like TupleGettableHelper but for a group of keys and expected types
-      //TODO: validate that all of T::keys are Stf::ArrayString
+      // TODO: add something like TupleGettableHelper but for a group of keys and expected types
+      // TODO: validate that all of T::keys are Stf::ArrayString
   };
 
-template<typename T, typename Key = std::string_view>
-concept MapIntrospector = //
+template<typename T>
+concept ObjectIntrospector = //
+  BaseIntrospector<T> &&     //
   requires(typename T::type const& cl, typename T::type& l) {
-      typename T::type;
-
-      { T::size(cl) } -> std::convertible_to<size_t>;
-
       T::at(cl, std::declval<std::string_view>());
       T::at(l, std::declval<std::string_view>());
 
       T::iterate(cl, [](std::string_view, auto const&) {});
       T::iterate(l, [](std::string_view, auto&) {});
   };
+
+template<typename T>
+concept MapIntrospector =  //
+  ObjectIntrospector<T> && //
+  requires() { typename T::member_type; };
 
 namespace Detail {
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 namespace Stf::Detail::CEMaths {
 
 /// TODO: this is most definitely not standards compliant
@@ -24,7 +26,7 @@ template<std::floating_point T, std::integral U> constexpr T pow(T base, U iexp)
     if (base == 1 || iexp == 0)
         return 1;
 
-    const std::pair<bool[4], T> exceptions[] {
+    const std::pair<std::array<bool, 4>, T> exceptions[] {
         // pow(+0, exp), where exp is a negative odd integer, returns +∞ and raises FE_DIVBYZERO
         { { zero_base, pos_base, neg_exp, odd_exp }, inf },
         // pow(-0, exp), where exp is a negative odd integer, returns -∞ and raises FE_DIVBYZERO

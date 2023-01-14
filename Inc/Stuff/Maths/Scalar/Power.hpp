@@ -108,7 +108,7 @@ template<std::floating_point T, std::integral U> constexpr T pow(T base, U iexp)
     if consteval {
         return Detail::CEMaths::pow(base, iexp);
     } else {
-        return std::pow(base, iexp)
+        return std::pow(base, iexp);
     }
 }
 

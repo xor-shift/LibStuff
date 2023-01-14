@@ -49,7 +49,6 @@ template<typename Stream> struct Serializer {
     constexpr result_type serialize_bool(bool b);
 
     template<std::integral T>
-        requires(!std::is_same_v<T, bool>)
     constexpr result_type serialize_integral(T v);
 
     constexpr result_type serialize_bytes(std::span<uint8_t> v);
@@ -138,30 +137,37 @@ private:
 template<typename Stream>
 template<std::floating_point T>
 constexpr typename Serializer<Stream>::result_type Serializer<Stream>::serialize_float(T v) {
-    constexpr auto format = std::chars_format::general;
-    std::array<char, 64> buf;
-    const auto res = std::to_chars(buf.data(), buf.data() + buf.size(), v, format);
+    std::array<char, std::numeric_limits<T>::max_digits10 + 2> buf;
+
+    const auto res = std::to_chars(buf.data(), buf.data() + buf.size(), v, std::chars_format::general);
 
     if (res.ec != std::errc())
         return tl::unexpected("failed to format floating point value");
 
-    std::span<char> fmt_chars(buf.data(), res.ptr);
+    stream << std::string_view(buf.data(), res.ptr);
 
-    stream << std::string_view(fmt_chars);
     return {};
 }
 
 template<typename Stream>
 constexpr typename Serializer<Stream>::result_type Serializer<Stream>::serialize_bool(bool b) {
     stream << (b ? "true" : "false");
+
     return {};
 }
 
 template<typename Stream>
 template<std::integral T>
-    requires(!std::is_same_v<T, bool>)
 constexpr typename Serializer<Stream>::result_type Serializer<Stream>::serialize_integral(T v) {
-    stream << v;
+    std::array<char, std::numeric_limits<T>::digits10 + 2> buf;
+
+    const auto res = std::to_chars(buf.data(), buf.data() + buf.size(), v, 10);
+
+    if (res.ec != std::errc())
+        return tl::unexpected("failed to format floating point value");
+
+    stream << std::string_view(buf.data(), res.ptr);
+
     return {};
 }
 

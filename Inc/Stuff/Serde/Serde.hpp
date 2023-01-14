@@ -9,10 +9,15 @@
 
 #include <Stuff/Serde/IntroSerializers.hpp>
 
-/*template<typename Serializer>
+template<typename Serializer>
 constexpr tl::expected<void, std::string_view> _libstf_adl_serializer(Serializer& serializer, bool v) {
     return serializer.serialize_bool(v);
-}*/
+}
+
+template<typename Serializer>
+constexpr tl::expected<void, std::string_view> _libstf_adl_serializer(Serializer& serializer, char v) {
+    return serializer.serialize_char(v);
+}
 
 template<typename Serializer, std::integral T>
     requires(!std::is_same_v<T, bool>) && (!std::is_same_v<T, char>)
@@ -20,14 +25,14 @@ constexpr tl::expected<void, std::string_view> _libstf_adl_serializer(Serializer
     return serializer.serialize_integral(v);
 }
 
-template<typename Serializer>
-constexpr tl::expected<void, std::string_view> _libstf_adl_serializer(Serializer& serializer, std::span<uint8_t> v) {
-    return serializer.serialize_bytes(v);
+template<typename Serializer, std::floating_point T>
+constexpr tl::expected<void, std::string_view> _libstf_adl_serializer(Serializer& serializer, T v) {
+    return serializer.serialize_float(v);
 }
 
 template<typename Serializer>
-constexpr tl::expected<void, std::string_view> _libstf_adl_serializer(Serializer& serializer, char v) {
-    return serializer.serialize_char(v);
+constexpr tl::expected<void, std::string_view> _libstf_adl_serializer(Serializer& serializer, std::span<uint8_t> v) {
+    return serializer.serialize_bytes(v);
 }
 
 template<typename Serializer>

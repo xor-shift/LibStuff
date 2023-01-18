@@ -18,12 +18,12 @@ template<typename E> struct ExpectedReturner<tl::expected<void, E>> {
 
 }
 
-#define TRYX(...)                                                          \
-    ({                                                                     \
-        auto res = (__VA_ARGS__);                                          \
-        if (!res.has_value())                                              \
-            return tl::unexpected { res.error() };                         \
-        Stf::Detail::ExpectedReturner<decltype(res)>::ret(std::move(res)); \
+#define TRYX(...)                                                            \
+    ({                                                                       \
+        auto _res = (__VA_ARGS__);                                           \
+        if (!_res.has_value())                                               \
+            return tl::unexpected { _res.error() };                          \
+        Stf::Detail::ExpectedReturner<decltype(_res)>::ret(std::move(_res)); \
     })
 
 #define ASSERTX(...)                                                       \

@@ -6,51 +6,133 @@
 
 namespace Stf {
 
-enum class GuardType {
-    ScopeExit,
-    ScopeFail,
-};
+template<typename EF> struct ScopeExit;
+template<typename EF> struct ScopeFail;
+template<typename EF> struct ScopeSuccess;
 
-template<typename Func> struct ScopeGuard {
-    ScopeGuard(ScopeGuard const&) = delete;
+namespace Detail {
 
-    ScopeGuard(ScopeGuard&& other)
-        : m_type(other.type)
-        , m_func(std::forward<Func>(other.m_func))
-        , m_armed(other.m_armed) {
+template<typename Fn, typename ScopeType>
+concept ScopeIsConstructible = (!std::is_same_v<std::remove_cvref_t<Fn>, ScopeType>)
+                            && (std::is_constructible_v<typename ScopeType::function_type, Fn>);
+
+template<typename Fn, typename ScopeType>
+concept ScopeIsConstructibleWithForward
+  = (!std::is_lvalue_reference_v<Fn>) && std::is_nothrow_constructible_v<typename ScopeType::function_type, Fn>;
+
+template<typename Fn, typename ScopeType>
+concept ScopeConstructorNoexcept = std::is_nothrow_constructible_v<typename ScopeType::function_type, Fn>
+                                || std::is_nothrow_constructible_v<typename ScopeType::function_type, Fn&>;
+
+template<typename ScopeType>
+concept ScopeIsMoveConstructible = std::is_nothrow_move_constructible_v<typename ScopeType::function_type>
+                                || std::is_copy_constructible_v<typename ScopeType::function_type>;
+
+template<typename ScopeType>
+concept ScopeIsMoveConstructibleWithForward = std::is_nothrow_move_constructible_v<typename ScopeType::function_type>;
+
+template<typename ScopeType>
+concept ScopeMoveConstructorNoexcept = std::is_nothrow_move_constructible_v<typename ScopeType::function_type>
+                                    || std::is_nothrow_copy_constructible_v<typename ScopeType::function_type>;
+
+template<typename EF> struct ScopeBase {
+    using function_type = EF;
+
+    friend struct ScopeExit<EF>;
+    friend struct ScopeFail<EF>;
+    friend struct ScopeSuccess<EF>;
+
+    template<typename Fn>
+        requires ScopeIsConstructible<Fn, ScopeBase> && ScopeIsConstructibleWithForward<Fn, ScopeBase>
+    explicit constexpr ScopeBase(Fn&& callback) noexcept(ScopeConstructorNoexcept<Fn, ScopeBase>)
+        : m_callback(std::forward<Fn>(callback))
+        , m_armed(true) { }
+
+    template<typename Fn>
+        requires ScopeIsConstructible<Fn, ScopeBase> && (!ScopeIsConstructibleWithForward<Fn, ScopeBase>)
+    explicit constexpr ScopeBase(Fn&& callback) noexcept(ScopeConstructorNoexcept<Fn, ScopeBase>)
+        : m_callback(std::forward<Fn>(callback))
+        , m_armed(true) { }
+
+    constexpr ScopeBase(ScopeBase&& other) noexcept(ScopeMoveConstructorNoexcept<ScopeBase>)
+        requires ScopeIsMoveConstructible<ScopeBase> && ScopeIsMoveConstructibleWithForward<ScopeBase>
+    : m_callback(std::forward<EF>(other.m_callback)) {
         other.release();
     }
 
-    ScopeGuard(GuardType type, Func&& f = {})
-        : m_type(type)
-        , m_func(std::forward<Func>(f)) { }
-
-    ~ScopeGuard() noexcept(noexcept(std::invoke(std::forward<Func>(m_func)))) {
-        if (!armed())
-            return;
-
-        GuardType execution_type;
-
-        if (std::current_exception() != nullptr)
-            execution_type = GuardType::ScopeFail;
-        else
-            execution_type = GuardType::ScopeExit;
-
-        if (execution_type == GuardType::ScopeExit && m_type == GuardType::ScopeFail)
-            return;
-
-        std::invoke(m_func);
+    constexpr ScopeBase(ScopeBase&& other) noexcept(ScopeMoveConstructorNoexcept<ScopeBase>)
+        requires ScopeIsMoveConstructible<ScopeBase> && (!ScopeIsMoveConstructibleWithForward<ScopeBase>)
+    : m_callback(other.m_callback) {
+        other.release();
     }
 
-    constexpr void release() { m_armed = false; }
+    ScopeBase(ScopeBase const&) = delete;
 
-    constexpr bool armed() const { return m_armed; }
-    constexpr operator bool() const { return armed(); }
+    constexpr void release() noexcept { m_armed = false; }
 
 private:
-    Func&& m_func;
-    GuardType m_type;
-    bool m_armed = true;
+    EF m_callback;
+    bool m_armed = false;
+
+    constexpr void execute() {
+        if (m_armed)
+            std::invoke(m_callback);
+    }
 };
+
+template<typename EF> ScopeBase(EF) -> ScopeBase<EF>;
+
+}
+
+template<typename EF> struct ScopeExit {
+    template<typename T>
+    constexpr ScopeExit(T&& v) noexcept(noexcept(Detail::ScopeBase<EF> { std::forward<T>(v) }))
+        : m_impl(std::forward<T>(v)) { }
+
+    constexpr ~ScopeExit() noexcept { m_impl.execute(); }
+
+    constexpr void release() noexcept { m_impl.release(); }
+
+private:
+    Detail::ScopeBase<EF> m_impl {};
+};
+
+template<typename EF> ScopeExit(EF) -> ScopeExit<EF>;
+
+template<typename EF> struct ScopeFail {
+    template<typename T>
+    constexpr ScopeFail(T&& v) noexcept(noexcept(Detail::ScopeBase<EF> { std::forward<T>(v) }))
+        : m_impl(std::forward<T>(v)) { }
+
+    constexpr ~ScopeFail() noexcept {
+        if (std::uncaught_exceptions() != 0)
+            m_impl.execute();
+    }
+
+    constexpr void release() noexcept { m_impl.release(); }
+
+private:
+    Detail::ScopeBase<EF> m_impl {};
+};
+
+template<typename EF> ScopeFail(EF) -> ScopeFail<EF>;
+
+template<typename EF> struct ScopeSuccess {
+    template<typename T>
+    constexpr ScopeSuccess(T&& v) noexcept(noexcept(Detail::ScopeBase<EF> { std::forward<T>(v) }))
+        : m_impl(std::forward<T>(v)) { }
+
+    constexpr ~ScopeSuccess() noexcept {
+        if (std::uncaught_exceptions() == 0)
+            m_impl.execute();
+    }
+
+    constexpr void release() noexcept { m_impl.release(); }
+
+private:
+    Detail::ScopeBase<EF> m_impl {};
+};
+
+template<typename EF> ScopeSuccess(EF) -> ScopeSuccess<EF>;
 
 }

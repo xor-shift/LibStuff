@@ -121,7 +121,7 @@ template<typename T, size_t N, bool SliceMSB0 = true, bool LookupMSB0 = false> c
         dst = src;
     }
 
-    std::ranges::copy(temporary, arr.begin());
+    copy(begin(temporary), end(temporary), begin(arr));
 }
 
 template<typename T, size_t N, bool SliceMSB0 = true, bool LookupMSB0 = false> constexpr void permute_elements(T (&arr)[N], auto const& lookup) {
@@ -148,7 +148,7 @@ template<size_t Bits, bool ToMSB = false, bool MSB0 = true> constexpr void bitsl
 
         if constexpr (ToMSB) {
             target >>= 1;
-            target |= b * (1ul << 63);
+            target |= b * ((uint64_t)1 << 63);
         } else {
             target <<= 1;
             target |= b;
@@ -162,7 +162,7 @@ template<size_t Bits, bool FromMSB = false, bool MSB0 = true> constexpr uint64_t
     for (auto i = 0uz; i < Bits; i++) {
         auto& source = slices[MSB0 ? i : Bits - i - 1];
         const auto b = FromMSB              //
-            ? ((source & (1ul << 63)) != 0) //
+            ? ((source & ((uint64_t)1 << 63)) != 0) //
             : ((source & 1) != 0);
 
         if constexpr (FromMSB)

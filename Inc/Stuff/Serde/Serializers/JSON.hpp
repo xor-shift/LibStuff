@@ -137,7 +137,8 @@ private:
 template<typename Stream>
 template<std::floating_point T>
 constexpr typename Serializer<Stream>::result_type Serializer<Stream>::serialize_float(T v) {
-    std::array<char, std::numeric_limits<T>::max_digits10 + 2> buf;
+    //std::array<char, std::numeric_limits<T>::max_digits10 + 2> buf;
+    std::array<char, 32> buf;
 
     const auto res = std::to_chars(buf.data(), buf.data() + buf.size(), v, std::chars_format::general);
 
